@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="463060c7-720b-4b78-adbe-953c47127981" name="Default Changelist" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CodeStyleSettingsInfer">
+    <option name="done" value="true" />
+  </component>
+  <component name="ProjectCodeStyleSettingsMigration">
+    <option name="version" value="1" />
+  </component>
+  <component name="ProjectId" id="1UR2d2Fc5TyEOchnGi2LW3beb3Y" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showExcludedFiles" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+  </component>
+  <component name="RunManager" selected="Application.RegexMain">
+    <configuration name="RegexMain" type="Application" factoryName="Application" temporary="true">
+      <option name="MAIN_CLASS_NAME" value="regex.operands.RegexMain" />
+      <module name="RegexOptimize" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="regex.operands.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="Regexify" type="Application" factoryName="Application" temporary="true">
+      <option name="MAIN_CLASS_NAME" value="regex.Regexify" />
+      <module name="RegexOptimize" />
+      <extension name="coverage">
+        <pattern>
+          <option name="PATTERN" value="regex.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Application.RegexMain" />
+        <item itemvalue="Application.Regexify" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="ServiceViewManager">
+    <option name="viewStates">
+      <list>
+        <serviceView>
+          <treeState>
+            <expand />
+            <select />
+          </treeState>
+        </serviceView>
+      </list>
+    </option>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="463060c7-720b-4b78-adbe-953c47127981" name="Default Changelist" comment="" />
+      <created>1575305170245</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1575305170245</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="1010" y="457" key="#com.intellij.codeInsight.editorActions.RestoreReferencesDialog" timestamp="1576665716784">
+      <screen x="0" y="0" width="2560" height="1400" />
+    </state>
+    <state x="1010" y="457" key="#com.intellij.codeInsight.editorActions.RestoreReferencesDialog/0.0.2560.1400@0.0.2560.1400" timestamp="1576665716784" />
+    <state x="837" y="335" width="368" height="598" key="#com.intellij.ide.util.MemberChooser" timestamp="1578213965689">
+      <screen x="41" y="27" width="1879" height="1053" />
+    </state>
+    <state x="1085" y="409" key="#com.intellij.ide.util.MemberChooser/0.0.2560.1400@0.0.2560.1400" timestamp="1576504635397" />
+    <state x="837" y="335" width="368" height="598" key="#com.intellij.ide.util.MemberChooser/41.27.1879.1053@41.27.1879.1053" timestamp="1578213965689" />
+    <state x="452" y="185" width="640" height="525" key="#com.intellij.openapi.updateSettings.impl.PluginUpdateInfoDialog" timestamp="1578431340361">
+      <screen x="0" y="0" width="1366" height="738" />
+    </state>
+    <state x="452" y="185" width="640" height="525" key="#com.intellij.openapi.updateSettings.impl.PluginUpdateInfoDialog/0.0.1366.738@0.0.1366.738" timestamp="1578431340361" />
+    <state x="847" y="350" key="#com.intellij.openapi.updateSettings.impl.PluginUpdateInfoDialog/0.0.2560.1400@0.0.2560.1400" timestamp="1578306784051" />
+    <state x="663" y="290" width="624" height="551" key="#com.intellij.openapi.updateSettings.impl.PluginUpdateInfoDialog/41.27.1879.1053@41.27.1879.1053" timestamp="1577865263705" />
+    <state x="484" y="259" width="397" height="226" key="#com.intellij.refactoring.move.moveClassesOrPackages.MoveClassesOrPackagesDialog.classes" timestamp="1578520925611">
+      <screen x="0" y="0" width="1366" height="738" />
+    </state>
+    <state x="484" y="259" width="397" height="226" key="#com.intellij.refactoring.move.moveClassesOrPackages.MoveClassesOrPackagesDialog.classes/0.0.1366.738@0.0.1366.738" timestamp="1578520925611" />
+    <state x="341" y="0" key="#com.intellij.refactoring.rename.AutomaticRenamingDialog" timestamp="1576505876286">
+      <screen x="0" y="0" width="2560" height="1400" />
+    </state>
+    <state x="341" y="0" key="#com.intellij.refactoring.rename.AutomaticRenamingDialog/0.0.2560.1400@0.0.2560.1400" timestamp="1576505876286" />
+    <state width="1322" height="194" key="GridCell.Tab.0.bottom" timestamp="1579466134931">
+      <screen x="0" y="0" width="1366" height="738" />
+    </state>
+    <state width="1322" height="194" key="GridCell.Tab.0.bottom/0.0.1366.738@0.0.1366.738" timestamp="1579466134931" />
+    <state width="1876" height="280" key="GridCell.Tab.0.bottom/0.0.1920.1050@0.0.1920.1050" timestamp="1576438842065" />
+    <state width="2517" height="545" key="GridCell.Tab.0.bottom/0.0.2560.1400@0.0.2560.1400" timestamp="1579184976630" />
+    <state width="1833" height="275" key="GridCell.Tab.0.bottom/41.27.1879.1053@41.27.1879.1053" timestamp="1578256835007" />
+    <state width="1322" height="194" key="GridCell.Tab.0.center" timestamp="1579466134931">
+      <screen x="0" y="0" width="1366" height="738" />
+    </state>
+    <state width="1322" height="194" key="GridCell.Tab.0.center/0.0.1366.738@0.0.1366.738" timestamp="1579466134931" />
+    <state width="1876" height="280" key="GridCell.Tab.0.center/0.0.1920.1050@0.0.1920.1050" timestamp="1576438842065" />
+    <state width="2517" height="545" key="GridCell.Tab.0.center/0.0.2560.1400@0.0.2560.1400" timestamp="1579184976630" />
+    <state width="1833" height="275" key="GridCell.Tab.0.center/41.27.1879.1053@41.27.1879.1053" timestamp="1578256835006" />
+    <state width="1322" height="194" key="GridCell.Tab.0.left" timestamp="1579466134930">
+      <screen x="0" y="0" width="1366" height="738" />
+    </state>
+    <state width="1322" height="194" key="GridCell.Tab.0.left/0.0.1366.738@0.0.1366.738" timestamp="1579466134930" />
+    <state width="1876" height="280" key="GridCell.Tab.0.left/0.0.1920.1050@0.0.1920.1050" timestamp="1576438842065" />
+    <state width="2517" height="545" key="GridCell.Tab.0.left/0.0.2560.1400@0.0.2560.1400" timestamp="1579184976614" />
+    <state width="1833" height="275" key="GridCell.Tab.0.left/41.27.1879.1053@41.27.1879.1053" timestamp="1578256835006" />
+    <state width="1322" height="194" key="GridCell.Tab.0.right" timestamp="1579466134931">
+      <screen x="0" y="0" width="1366" height="738" />
+    </state>
+    <state width="1322" height="194" key="GridCell.Tab.0.right/0.0.1366.738@0.0.1366.738" timestamp="1579466134931" />
+    <state width="1876" height="280" key="GridCell.Tab.0.right/0.0.1920.1050@0.0.1920.1050" timestamp="1576438842065" />
+    <state width="2517" height="545" key="GridCell.Tab.0.right/0.0.2560.1400@0.0.2560.1400" timestamp="1579184976630" />
+    <state width="1833" height="275" key="GridCell.Tab.0.right/41.27.1879.1053@41.27.1879.1053" timestamp="1578256835006" />
+    <state width="1322" height="194" key="GridCell.Tab.1.bottom" timestamp="1579466134931">
+      <screen x="0" y="0" width="1366" height="738" />
+    </state>
+    <state width="1322" height="194" key="GridCell.Tab.1.bottom/0.0.1366.738@0.0.1366.738" timestamp="1579466134931" />
+    <state width="2517" height="545" key="GridCell.Tab.1.bottom/0.0.2560.1400@0.0.2560.1400" timestamp="1579184976630" />
+    <state width="1833" height="449" key="GridCell.Tab.1.bottom/41.27.1879.1053@41.27.1879.1053" timestamp="1578256835001" />
+    <state width="1322" height="194" key="GridCell.Tab.1.center" timestamp="1579466134931">
+      <screen x="0" y="0" width="1366" height="738" />
+    </state>
+    <state width="1322" height="194" key="GridCell.Tab.1.center/0.0.1366.738@0.0.1366.738" timestamp="1579466134931" />
+    <state width="2517" height="545" key="GridCell.Tab.1.center/0.0.2560.1400@0.0.2560.1400" timestamp="1579184976630" />
+    <state width="1833" height="449" key="GridCell.Tab.1.center/41.27.1879.1053@41.27.1879.1053" timestamp="1578256835000" />
+    <state width="1322" height="194" key="GridCell.Tab.1.left" timestamp="1579466134931">
+      <screen x="0" y="0" width="1366" height="738" />
+    </state>
+    <state width="1322" height="194" key="GridCell.Tab.1.left/0.0.1366.738@0.0.1366.738" timestamp="1579466134931" />
+    <state width="2517" height="545" key="GridCell.Tab.1.left/0.0.2560.1400@0.0.2560.1400" timestamp="1579184976630" />
+    <state width="1833" height="449" key="GridCell.Tab.1.left/41.27.1879.1053@41.27.1879.1053" timestamp="1578256835000" />
+    <state width="1322" height="194" key="GridCell.Tab.1.right" timestamp="1579466134931">
+      <screen x="0" y="0" width="1366" height="738" />
+    </state>
+    <state width="1322" height="194" key="GridCell.Tab.1.right/0.0.1366.738@0.0.1366.738" timestamp="1579466134931" />
+    <state width="2517" height="545" key="GridCell.Tab.1.right/0.0.2560.1400@0.0.2560.1400" timestamp="1579184976630" />
+    <state width="1833" height="449" key="GridCell.Tab.1.right/41.27.1879.1053@41.27.1879.1053" timestamp="1578256835001" />
+    <state width="1279" height="702" key="XDebugger.FullValuePopup" timestamp="1579183786098">
+      <screen x="0" y="0" width="2560" height="1400" />
+    </state>
+    <state width="682" height="370" key="XDebugger.FullValuePopup/0.0.1366.738@0.0.1366.738" timestamp="1578502992882" />
+    <state width="1279" height="702" key="XDebugger.FullValuePopup/0.0.2560.1400@0.0.2560.1400" timestamp="1579183786098" />
+    <state width="937" height="527" key="XDebugger.FullValuePopup/41.27.1879.1053@41.27.1879.1053" timestamp="1578213289410" />
+    <state x="936" y="330" key="run.anything.popup" timestamp="1578649090101">
+      <screen x="0" y="0" width="2560" height="1400" />
+    </state>
+    <state x="936" y="330" key="run.anything.popup/0.0.2560.1400@0.0.2560.1400" timestamp="1578649090101" />
+    <state x="648" y="112" width="1260" height="1287" key="search.everywhere.popup" timestamp="1579352259748">
+      <screen x="0" y="0" width="2560" height="1400" />
+    </state>
+    <state x="346" y="59" width="672" height="678" key="search.everywhere.popup/0.0.1366.738@0.0.1366.738" timestamp="1579340173189" />
+    <state x="648" y="112" width="1260" height="1287" key="search.everywhere.popup/0.0.2560.1400@0.0.2560.1400" timestamp="1579352259748" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="scala-line">
+          <url>file://$PROJECT_DIR$/src/regex/operands/RegexOp.scala</url>
+          <line>480</line>
+          <option name="timeStamp" value="67" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="scala-line">
+          <url>file://$PROJECT_DIR$/src/regex/operands/RegexOp.scala</url>
+          <line>446</line>
+          <properties>
+            <option name="lambda-ordinal" value="-1" />
+          </properties>
+          <option name="timeStamp" value="76" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="scala-line">
+          <url>file://$PROJECT_DIR$/src/regex/operands/RegexOp.scala</url>
+          <line>430</line>
+          <properties>
+            <option name="lambda-ordinal" value="-1" />
+          </properties>
+          <option name="timeStamp" value="124" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="scala-line">
+          <url>file://$PROJECT_DIR$/src/regex/operands/RegexOp.scala</url>
+          <line>422</line>
+          <option name="timeStamp" value="129" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="scala-line">
+          <url>file://$PROJECT_DIR$/src/regex/operands/RegexOp.scala</url>
+          <line>381</line>
+          <option name="timeStamp" value="131" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="scala-line">
+          <url>file://$PROJECT_DIR$/src/regex/operands/RegexMain.scala</url>
+          <line>52</line>
+          <option name="timeStamp" value="132" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="scala-line">
+          <url>file://$PROJECT_DIR$/src/regex/operands/RegexSearch.scala</url>
+          <line>41</line>
+          <properties>
+            <option name="lambda-ordinal" value="0" />
+          </properties>
+          <option name="timeStamp" value="137" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+    <watches-manager>
+      <configuration name="Application">
+        <watch expression="" />
+        <watch expression="this" />
+      </configuration>
+    </watches-manager>
+  </component>
+</project>
