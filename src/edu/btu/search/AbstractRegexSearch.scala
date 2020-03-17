@@ -1,0 +1,390 @@
+package edu.btu.search
+
+import edu.btu.operands.{RegexNode, RegexNodeIndex, RegexOp, Regexify}
+
+
+abstract class AbstractRegexSearch() extends Serializable {
+
+  var positives = Seq[Seq[RegexNodeIndex]]()
+  var negatives = Seq[Seq[RegexNodeIndex]]()
+  var additionalCost = 10d
+
+  def search(): Seq[Matrix]
+
+  def regexify(value: String): RegexNodeIndex
+
+  def initMatrix(source: Seq[RegexNodeIndex], target: Seq[RegexNodeIndex]): Array[Array[CellContent]] = {
+
+    val sizex = source.length
+    val sizey = target.length
+
+    var matrix = Array[Array[CellContent]]()
+
+    for (i <- 0 until sizex) {
+
+      var row = Array[CellContent]()
+
+      for (j <- 0 until sizey) {
+
+        row = row :+ CellContent(i, j)
+
+      }
+
+      matrix = matrix :+ row
+
+    }
+
+    matrix
+
+  }
+
+
+
+  def initMatrix(sizex: Int, sizey: Int): Array[Array[CellContent]] = {
+
+    var matrix = Array[Array[CellContent]]()
+
+    for (i <- 0 until sizex) {
+
+      var row = Array[CellContent]()
+
+      for (j <- 0 until sizey) {
+        row = row :+ CellContent(i, j)
+      }
+      matrix = matrix :+ row
+    }
+    matrix
+
+  }
+
+  def addPositive(pair: (String, String)): this.type = {
+    val (source, target) = (regexify(pair._1), regexify(pair._2))
+
+    positives :+= source.elems
+    positives :+= target.elems
+
+    this
+  }
+
+  def addPositive(samples: Seq[String]): this.type = {
+    val sources = samples.map(regexify(_).elems)
+    positives ++= sources
+    this
+  }
+
+  def addPositive(sample: String): this.type = {
+    val source = regexify(sample)
+    positives :+= source.elems
+    this
+  }
+
+  def addNegative(samples: Seq[String]): this.type = {
+    val sources = samples.map(regexify(_).elems)
+    negatives ++= sources
+    this
+  }
+
+  def addNegative(sample: String): this.type = {
+    val source = regexify(sample)
+    negatives :+= source.elems
+    this
+  }
+
+  def addNegative(pair: (String, String)): this.type = {
+    val (source, target) = (regexify(pair._1), regexify(pair._2))
+    negatives :+= source.elems
+    negatives :+= target.elems
+    this
+  }
+
+  def search(matrices: Seq[Matrix]): Seq[Seq[Path]] = {
+    matrices.map(matrix => {
+      val cells = matrix.getCells(0, 0)
+      val paths = cells.flatMap(search(_, Seq(), matrix))
+      paths
+    })
+  }
+
+  def search(matrices: Seq[Matrix], top: Int): Seq[Seq[Path]] = {
+    matrices.map(matrix => {
+      val cells = matrix.getCells(0, 0)
+      val paths = cells.flatMap(search(_, Seq(), matrix, top))
+      paths
+    })
+  }
+
+  def searchLoop(matrices: Seq[Matrix], top: Int): Seq[Seq[Path]] = {
+    matrices.map(matrix => {
+      val cells = matrix.getCells(0, 0)
+      val paths = cells.flatMap(searchLoop(_, matrix, top))
+      paths
+    })
+  }
+
+  def searchZigZagLoop(matrices: Seq[Matrix], top: Int): Seq[Seq[Path]] = {
+    val zigzagCost: Double = 10.0
+    matrices.map(matrix => {
+      val cells = matrix.getCells(0, 0)
+      val paths = cells.flatMap(searchZigZagLoop(_, matrix, top, zigzagCost))
+      paths
+    })
+  }
+
+
+  def search(newCell: Cell, paths: Seq[Path], matrix: Matrix): Seq[Path] = {
+
+    val updatePaths = if (paths.isEmpty) Seq(Path(Seq(newCell), newCell.cost))
+    else paths.map(currentPath => currentPath.copy().addCell(newCell, newCell.cost))
+
+    //while(i, j) until block is distrupted...
+    //when disrupted use recursion to create new block on the last path
+    updatePaths.flatMap(currentPath => {
+      val currentCell = currentPath.getLastCell()
+      val nextCells = currentCell.nextCells(matrix)
+      if (nextCells.isEmpty) updatePaths
+      else {
+        nextCells.flatMap(nextCell => search(nextCell, Seq(currentPath), matrix))
+      }
+    }).sortBy(_.cost)
+  }
+
+
+  def search(newCell: Cell, paths: Seq[Path], matrix: Matrix, top: Int): Seq[Path] = {
+
+    //updating current paths by adding or modifying the last cell
+    val updatePaths = if (paths.isEmpty) Seq(Path(Seq(newCell), newCell.cost))
+    else paths.map(currentPath => currentPath.copy().addCell(newCell, newCell.cost))
+
+    //last blocks of the updatepaths
+    val updateCells = newCell.nextCells(matrix)
+
+    val returnPaths = (if (updateCells.isEmpty) updatePaths
+    else updateCells.flatMap(updateCell => search(updateCell, updatePaths, matrix, top)))
+
+
+    returnPaths.sortBy(_.cost).take(top)
+  }
+
+  def searchLoop(newCell: Cell, matrix: Matrix, top: Int): Seq[Path] = {
+
+    //updating current paths by adding or modifying the last cell
+
+    var updatePaths = Seq(Path(Seq(newCell), newCell.cost))
+    var updateCelling = newCell.nextCells(matrix).map(cell => (cell, Path(Seq(newCell), newCell.cost)))
+
+
+    while (!updateCelling.isEmpty) {
+
+      val newCelling = updateCelling.map { case (cell, currentPath) => {
+        val newPath = currentPath.copy().addCell(cell, cell.cost)
+        (cell, newPath)
+        //for this cell and path
+      }
+      }
+
+      updatePaths = newCelling.map(_._2).sortBy(_.cost)
+      updateCelling = newCelling
+        .flatMap { case (cell, path) => {
+          cell.nextCells(matrix).map(newCell => (newCell, path))
+        }
+        }
+        .sortBy(_._2.cost).take(top)
+
+    }
+
+    updatePaths
+
+  }
+
+  def searchZigZagLoop(newCell: Cell, matrix: Matrix, top: Int, cost: Double): Seq[Path] = {
+
+    //updating current paths by adding or modifying the last cell
+
+    var updatePaths = Seq(Path(Seq(newCell), newCell.cost))
+    var updateCelling = newCell.nextCells(matrix).map(cell => (cell, Path(Seq(newCell), newCell.cost)))
+
+
+    while (!updateCelling.isEmpty) {
+
+      val newCelling = updateCelling.map { case (cell, currentPath) => {
+        val newPath = currentPath.copy().addCell(cell, cell.cost, cost)
+        (cell, newPath)
+        //for this cell and path
+      }
+      }
+
+      updatePaths = newCelling.map(_._2)
+      updateCelling = newCelling
+        .flatMap { case (cell, path) => {
+          cell.nextCells(matrix).map(newCell => (newCell, path))
+        }
+        }
+        .sortBy(_._2.cost).take(top)
+
+    }
+
+    updatePaths
+
+  }
+
+  def goDown(crrCell: Cell, rowLength: Int): (Boolean, Int, Int) = {
+    if (crrCell.i < (rowLength - 1)) (true, crrCell.i + 1, crrCell.j)
+    else (false, 0, 0)
+  }
+
+  def goRight(crrCell: Cell, columnLength: Int): (Boolean, Int, Int) = {
+    if (crrCell.j < (columnLength - 1)) (true, crrCell.i, crrCell.j + 1)
+    else (false, 0, 0)
+  }
+
+  def goCross(crrCell: Cell, rowLength: Int, columnLength: Int): (Boolean, Int, Int) = {
+    if (crrCell.i < (rowLength - 1) && crrCell.j < (columnLength - 1)) (true, crrCell.i + 1, crrCell.j + 1)
+    else (false, 0, 0)
+  }
+
+  def searchDirectional(paths: Seq[Path], source: Seq[RegexNodeIndex], target: Seq[RegexNodeIndex], i: Int, j: Int): Seq[Path] = {
+    paths.flatMap(searchDirectional(_, source, target, i, j))
+  }
+
+  def searchCost(path: Path, cell: Cell): Double = {
+    val sourceNode = cell.source
+    val targetNode = cell.target
+
+
+    if (path.hasLastCell()) {
+      val lastCell = path.getLastCell()
+
+      if (lastCell.directional(cell) && sourceNode.equalsByValue(targetNode)) 0.0
+      else if (lastCell.directional(cell) && sourceNode.equalsByGroup(targetNode)) 1.0
+      else if (lastCell.directional(cell) && sourceNode.matchesByGroup(targetNode)) 2.0
+      else if (lastCell.directional(cell)) 3.0
+      else 4.0
+
+    }
+    else if (sourceNode.equalsByValue(targetNode)) 0.0
+    else if (sourceNode.equalsByGroup(targetNode)) 1.0
+    else if (sourceNode.matchesByGroup(targetNode)) 2.0
+    else 3.0
+  }
+
+
+  def searchDirectional(path: Path, source: Seq[RegexNodeIndex], target: Seq[RegexNodeIndex], i: Int, j: Int): Seq[Path] = {
+
+    val sourceLength = source.length
+    val targetLength = target.length
+    val sourceNode = source(i)
+    val targetNode = target(j)
+    val cell = Cell(i, j, sourceNode, targetNode)
+
+    var paths = Seq[Path]()
+
+    val blockCost = searchCost(path, cell)
+
+
+    val nextPath = path.addCell(cell, blockCost, additionalCost)
+    if (cell.isLast(sourceLength, targetLength)) {
+      paths = paths :+ nextPath
+    }
+
+    //multi
+    if (path.hasLastCell()) {
+
+      val lastCell = path.getLastCell()
+
+      /* if (cell.directional(lastCell)) {
+         val nextPath = path.addCell(cell, 0)
+         if (cell.isLast(sourceLength, targetLength)) {
+           paths = paths :+ nextPath.copy()
+         }
+       }*/
+
+      if (lastCell.isDown()) {
+        val (canDown, di, dj) = goDown(cell, sourceLength)
+        val (canCross, ci, cj) = goCross(cell, sourceLength, targetLength)
+        if (canDown) paths ++= searchDirectional(path.copy(), source, target, di, dj)
+        if (canCross) paths ++= searchDirectional(path.copy(), source, target, ci, cj)
+      }
+
+      if (lastCell.isRight()) {
+        val (canRight, di, dj) = goRight(cell, targetLength)
+        val (canCross, ci, cj) = goCross(cell, sourceLength, targetLength)
+        if (canRight) paths ++= searchDirectional(path.copy(), source, target, di, dj)
+        if (canCross) paths ++= searchDirectional(path.copy(), source, target, ci, cj)
+      }
+
+      if (lastCell.isCross()) {
+        val (canRight, ri, rj) = goRight(cell, target.length)
+        val (canDown, di, dj) = goDown(cell, source.length)
+        val (canCross, ci, cj) = goCross(cell, source.length, target.length)
+        if (canRight) paths ++= searchDirectional(path.copy(), source, target, ri, rj)
+        if (canDown) paths ++= searchDirectional(path.copy(), source, target, di, dj)
+        if (canCross) paths ++= searchDirectional(path.copy(), source, target, ci, cj)
+      }
+
+    }
+    else {
+      val (canRight, ri, rj) = goRight(cell, target.length)
+      val (canDown, di, dj) = goDown(cell, source.length)
+      val (canCross, ci, cj) = goCross(cell, source.length, target.length)
+      if (canRight) paths ++= searchDirectional(path.copy(), source, target, ri, rj)
+      if (canDown) paths ++= searchDirectional(path.copy(), source, target, di, dj)
+      if (canCross) paths ++= searchDirectional(path.copy(), source, target, ci, cj)
+    }
+
+    paths
+
+  }
+
+  def searchDirectional(): Seq[Path] = {
+    val positiveZip1 = positives.zipWithIndex
+    val positiveZip2 = positives.zipWithIndex
+
+    val sourceTargets = positiveZip1.par.flatMap(pos1 => positiveZip2.map(pos2 => (pos1, pos2)))
+      .filter { case (source, target) => source._2 > target._2 }.map { case (source, target) => (source._1, target._1) }
+
+    val path = new Path()
+
+    val paths = sourceTargets.flatMap { case (source, target) => {
+      searchDirectional(path, source, target, 0, 0)
+    }
+    }
+
+    paths.toArray.toSeq
+
+  }
+
+
+  def searchOrDirectional(): Seq[Path] = {
+    val positiveZip1 = positives.zipWithIndex
+    val positiveZip2 = positives.zipWithIndex
+
+    val sourceTargets = positiveZip1.par.flatMap(pos1 => positiveZip2.map(pos2 => (pos1, pos2)))
+      .filter { case (source, target) => source._2 > target._2 }.map { case (source, target) => (source._1, target._1) }
+
+    val sourceSize = sourceTargets.map(_._1.length).max
+    val targetSize = sourceTargets.map(_._2.length).max
+
+    val sourceNodes = Range(0, sourceSize).map(i=> RegexNodeIndex(i, RegexOp(Regexify.or)))
+    val targetNodes = Range(0, targetSize).map(i=> RegexNodeIndex(i, RegexOp(Regexify.or)))
+
+    val (sources, targets) = sourceTargets.foldLeft[(Seq[RegexNodeIndex], Seq[RegexNodeIndex])]((sourceNodes, targetNodes)) {
+      case ((source, target), (nextSource, nextTarget)) => {
+        val minSource = Math.min(sourceSize, nextSource.length)
+        val minTarget = Math.min(targetSize, nextTarget.length)
+
+        for (i <- 0 until minSource) sourceNodes(i).add(nextSource(i)).regexify()
+        for (i <- 0 until minTarget) targetNodes(i).add(nextTarget(i)).regexify()
+
+        (sourceNodes, targetNodes)
+      }
+    }
+
+    val path = new Path()
+    val paths = searchDirectional(path, sources, targets, 0, 0)
+
+    paths.toArray.toSeq
+
+  }
+
+
+}
