@@ -11,6 +11,8 @@ abstract class AbstractRegexSearch() extends Serializable {
 
   def search(): Seq[Matrix]
 
+  def searchFast():Seq[Path]
+
   def regexify(value: String): RegexNodeIndex
 
   def initMatrix(source: Seq[RegexNodeIndex], target: Seq[RegexNodeIndex]): Array[Array[CellContent]] = {
@@ -25,9 +27,7 @@ abstract class AbstractRegexSearch() extends Serializable {
       var row = Array[CellContent]()
 
       for (j <- 0 until sizey) {
-
         row = row :+ CellContent(i, j)
-
       }
 
       matrix = matrix :+ row
@@ -353,8 +353,28 @@ abstract class AbstractRegexSearch() extends Serializable {
 
   }
 
+ def searchDirectionalWithNegative(): Seq[Path] = {
 
-  def searchOrDirectional(): Seq[Path] = {
+   val positiveZip1 = positives.zipWithIndex
+   val positiveZip2 = positives.zipWithIndex
+   val negativeZip1 = negatives.zipWithIndex
+
+    val sourceTargets = positiveZip1.par.flatMap(pos1 => positiveZip2.map(pos2 => (pos1, pos2)))
+      .filter { case (source, target) => source._2 > target._2 }.map { case (source, target) => (source._1, target._1) }
+
+    val path = new Path()
+
+    val paths = sourceTargets.flatMap { case (source, target) => {
+      searchDirectional(path, source, target, 0, 0)
+    }
+    }
+
+    paths.toArray.toSeq
+
+  }
+
+
+  def searchMultiDirectional(): Seq[Path] = {
     val positiveZip1 = positives.zipWithIndex
     val positiveZip2 = positives.zipWithIndex
 

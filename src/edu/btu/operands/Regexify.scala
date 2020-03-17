@@ -52,6 +52,8 @@ object Regexify {
     else source.matchValue + "|" + target.matchValue
   }
 
+
+
   /*def orGroupLeft(mainNode: RegexNodeIndex, targetNode: RegexNodeIndex): RegexNodeIndex = {
     RegexNodeIndex(OrGroupOp(mainNode.matchTxt, null, Regexify.or, -1, -1), mainNode.elems :+ targetNode)
       .regexify()

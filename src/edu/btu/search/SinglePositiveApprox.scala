@@ -88,4 +88,8 @@ class SinglePositiveApprox extends AbstractRegexSearch() {
 
     Seq(Matrix(Seq(), Seq(), contents))
   }
+
+  override def searchFast(): Seq[Path] = {
+    searchDirectional()
+  }
 }

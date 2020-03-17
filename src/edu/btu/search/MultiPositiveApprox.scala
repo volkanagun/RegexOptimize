@@ -86,6 +86,11 @@ class MultiPositiveApprox() extends AbstractRegexSearch() {
     Seq(Matrix(Seq(), Seq(), contents))
   }
 
+
+  override def searchFast(): Seq[Path] = {
+    searchMultiDirectional()
+  }
+
   override def regexify(value: String): RegexNodeIndex = {
     Regexify.continuousGrouping(value)
   }

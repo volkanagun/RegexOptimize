@@ -63,6 +63,13 @@ case class Cell(i: Int, j: Int, var source: RegexNodeIndex = null, var target: R
 
   var rowEnd = false;
   var colEnd = false;
+  var isNegative = false;
+
+
+  def setNegative():this.type ={
+    isNegative = true;
+    this
+  }
 
   def setRowEnd(): this.type = {
     rowEnd = true
@@ -480,6 +487,23 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
   }
 
   def addCell(cell: Cell, blockCost: Double, zigzagCost: Double): this.type = {
+    if (cells.isEmpty) {
+      addCell(cell, blockCost)
+    }
+    else {
+      if (getLastCell().directional(cell)) {
+        addCell(cell, blockCost)
+      }
+      else {
+        cells :+= cell
+        cost = cost + blockCost + zigzagCost
+      }
+
+    }
+    this
+  }
+
+  def addCellWithNegative(cell: Cell, blockCost: Double, zigzagCost: Double): this.type = {
     if (cells.isEmpty) {
       addCell(cell, blockCost)
     }

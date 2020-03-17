@@ -47,7 +47,6 @@ class RegexSearch() extends AbstractRegexSearch() {
 
             val cellContent = matrix(i)(j)
 
-
             if (source(i).equalsByGroup(target(j))) {
               //equality
               val cell = Cell(i, j)

@@ -10,15 +10,15 @@ object RegexTest {
 
   }
 
-  def method(i:Int):AbstractRegexSearch={
-    if(i == 0) new SinglePositiveExact()
-    else if(i==1) new SinglePositiveApprox()
-    else if(i==2) new MultiPositiveExact()
-    else if(i==3) new MultiPositiveApprox()
+  def method(i: Int): AbstractRegexSearch = {
+    if (i == 0) new SinglePositiveExact()
+    else if (i == 1) new SinglePositiveApprox()
+    else if (i == 2) new MultiPositiveExact()
+    else if (i == 3) new MultiPositiveApprox()
     else null
   }
 
-  def test0(methodIndex:Int): Unit = {
+  def test0(methodIndex: Int): Unit = {
     val sequence1 = "Phone: 34576890989";
     val sequence2 = "Phone: 24585645464";
     val sequence3 = "Phone: 54585645464";
@@ -26,69 +26,69 @@ object RegexTest {
     test(Seq(sequence1, sequence2, sequence3), method(methodIndex), 0)
   }
 
-  def test1(methodIndex:Int): Unit = {
+  def test1(methodIndex: Int): Unit = {
 
     val sequence1 = "345 PH+";
     val sequence2 = "!45 PH-";
     test(Seq(sequence1, sequence2), method(methodIndex), 0)
   }
 
-  def test2(methodIndex:Int): Unit = {
+  def test2(methodIndex: Int): Unit = {
     val sequence1 = "5abc5:";
     val sequence2 = "pb5:4";
     test(Seq(sequence1, sequence2), method(methodIndex), 0)
   }
 
- def test3(methodIndex:Int): Unit = {
+  def test3(methodIndex: Int): Unit = {
     val sequence1 = "abcd5";
     val sequence2 = "axyzp10";
     test(Seq(sequence1, sequence2), method(methodIndex), 0)
   }
 
-  def test4(methodIndex:Int): Unit = {
+  def test4(methodIndex: Int): Unit = {
     val sequence1 = "0A?p7p8";
     val sequence2 = "0123A4p?";
     test(Seq(sequence1, sequence2), method(methodIndex), 0)
   }
 
-  def test5(methodIndex:Int): Unit = {
+  def test5(methodIndex: Int): Unit = {
     val sequence1 = "abcd";
     val sequence2 = "axd";
     val sequence3 = "y";
 
-    test(Seq(sequence1, sequence2, sequence3), method(methodIndex),0)
+    test(Seq(sequence1, sequence2, sequence3), method(methodIndex), 0)
   }
 
-  def test6(methodIndex:Int): Unit = {
+  def test6(methodIndex: Int): Unit = {
     val sequence1 = "xzabcx";
     val sequence2 = "xyefgx";
     val sequence3 = "xabcdx";
     test(Seq(sequence1, sequence2, sequence3), method(methodIndex), 0)
   }
 
-  def test7(methodIndex:Int): Unit = {
+  def test7(methodIndex: Int): Unit = {
     val sequence1 = "xyzabc";
     val sequence2 = "abc";
-   /* val sequence3 = "prbabc";
-    val sequence4 = "tlmabc";e*/
+    /* val sequence3 = "prbabc";
+     val sequence4 = "tlmabc";e*/
 
-    test(Seq(sequence1, sequence2/*, sequence3, sequence4*/), method(methodIndex), 0)
+    test(Seq(sequence1, sequence2 /*, sequence3, sequence4*/), method(methodIndex), 0)
   }
 
-  def test8(methodIndex:Int): Unit = {
+  def test8(methodIndex: Int): Unit = {
     val sequence1 = "xyzabc";
     val sequence2 = "abc";
-   /* val sequence3 = "prbabc";
-    val sequence4 = "tlmabc";e*/
+    /* val sequence3 = "prbabc";
+     val sequence4 = "tlmabc";e*/
 
-    test(Seq(sequence1, sequence2/*, sequence3, sequence4*/), method(methodIndex), 3)
+    test(Seq(sequence1, sequence2 /*, sequence3, sequence4*/), method(methodIndex), 3)
   }
 
-  def test(sequences:Seq[String], regexSearch: AbstractRegexSearch, testIndex:Int): Unit ={
-    if(testIndex == 0) testRegular(sequences, regexSearch)
-    else if(testIndex == 1) testZigzag(sequences, regexSearch)
-    else if(testIndex == 2) testEfficient(sequences, regexSearch)
-    else if(testIndex == 3) testOrEfficient(sequences, regexSearch)
+  def test(sequences: Seq[String], regexSearch: AbstractRegexSearch, testIndex: Int): Unit = {
+    if (testIndex == 0) testRegular(sequences, regexSearch)
+    else if (testIndex == 1) testZigzag(sequences, regexSearch)
+    else if (testIndex == 2) testEfficient(sequences, regexSearch)
+    else if (testIndex == 3) testOrEfficient(sequences, regexSearch)
   }
 
   def node(value: String, i: Int): RegexNodeIndex = RegexNodeIndex(i, RegexOp(Regexify.seq), Seq())
@@ -97,6 +97,16 @@ object RegexTest {
     .setMatchValue(value)
 
   def cell(i: Int, j: Int, src: String, dst: String): Cell = Cell(i, j, node(src, i), node(dst, j))
+
+
+
+  def cellFromString(i: Int, j: Int, src: String, dst: String): Cell = {
+    val nsrc = src(i).toString
+    val ndst = dst(j).toString
+    Cell(i, j, node(nsrc, i), node(ndst, j))
+  }
+
+
 
 
   def test1(): String = {
@@ -204,6 +214,7 @@ object RegexTest {
     regexStr
 
   }
+
   def test7(): String = {
     val path = Path()
 
@@ -225,75 +236,74 @@ object RegexTest {
   }
 
 
-
-  def testRegular(sequences:Seq[String], regexSearch: AbstractRegexSearch): Unit = {
+  def testRegular(sequences: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
     val matrices = regexSearch.addPositive(sequences).search()
-    val paths = regexSearch.searchZigZagLoop(matrices,10)
+    val paths = regexSearch.searchZigZagLoop(matrices, 10)
       .flatten
       .sortBy(_.cost)
       .toArray
 
     val regexes = paths.flatMap(crrPath => {
-      crrPath.toRegex()}).distinct
+      crrPath.toRegex()
+    }).distinct
 
     matchTest(regexes, sequences)
   }
 
 
-  def testEfficient(sequences:Seq[String], regexSearch: AbstractRegexSearch): Unit = {
+  def testEfficient(sequences: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
     val matrices = regexSearch.addPositive(sequences).search()
     val paths = regexSearch.searchDirectional()
       .sortBy(_.cost)
       .toArray
 
     val regexes = paths.flatMap(crrPath => {
-      crrPath.toRegex()}).distinct
+      crrPath.toRegex()
+    }).distinct
 
     matchTest(regexes, sequences)
   }
 
- def testOrEfficient(sequences:Seq[String], regexSearch: AbstractRegexSearch): Unit = {
-    val matrices = regexSearch.addPositive(sequences).search()
-    val paths = regexSearch.searchOrDirectional()
+  def testOrEfficient(sequences: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
+    val paths = regexSearch.addPositive(sequences).searchMultiDirectional()
       .sortBy(_.cost)
       .toArray
 
     val regexes = paths.map(crrPath => {
-      crrPath.toOrRegex().constructRegex()}).distinct
+      crrPath.toOrRegex().updateRegex()
+    }).distinct
 
     matchTest(regexes, sequences)
   }
 
 
-
-
-  def testZigzag(sequences:Seq[String], regexSearch: AbstractRegexSearch): Unit = {
+  def testZigzag(sequences: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
     val matrices = regexSearch.addPositive(sequences).search()
-    val paths = regexSearch.searchZigZagLoop(matrices,10)
+    val paths = regexSearch.searchZigZagLoop(matrices, 10)
 
     val regexes = paths.flatten.flatMap(crrPath => {
-      crrPath.toRegex()}).distinct
+      crrPath.toRegex()
+    }).distinct
 
     matchTest(regexes, sequences)
   }
 
 
-  def matchTest(regexes:Seq[String], sequences:Seq[String]) : Unit = {
+  def matchTest(regexes: Seq[String], sequences: Seq[String]): Unit = {
 
     println("Regular expression count: " + regexes.length)
 
-    regexes.foreach(regex=> {
-     sequences.foreach(sequence=> {
-        if(!sequence.matches("^"+regex+"$")){
+    regexes.foreach(regex => {
+      sequences.foreach(sequence => {
+        if (!sequence.matches("^" + regex + "$")) {
           println(s"No - match: ${sequence} and regex:${regex}")
         }
-        else{
+        else {
           println(s"Yes - match: ${sequence} and regex:${regex}")
         }
       })
     })
   }
-
 
 
 }

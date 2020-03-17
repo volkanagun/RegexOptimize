@@ -6,9 +6,7 @@ import scala.util.control.Breaks
 
 class SinglePositiveExact() extends AbstractRegexSearch() {
 
-
   override def regexify(value: String): RegexNodeIndex = Regexify.direct(value)
-
 
   override def search(): Seq[Matrix] = {
 
@@ -96,5 +94,9 @@ class SinglePositiveExact() extends AbstractRegexSearch() {
     }
 
     matrices.map({ case (source, target, content) => Matrix(source, target, content) })
+  }
+
+  override def searchFast(): Seq[Path] = {
+    searchDirectional()
   }
 }
