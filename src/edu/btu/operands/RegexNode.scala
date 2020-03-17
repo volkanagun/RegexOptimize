@@ -32,6 +32,18 @@ case class RegexNodeIndex(var indice:Int, var regexOp: RegexOp, var elems:Seq[Re
       .setMatchGroup(matchGroup)
   }
 
+  def isType(typeValue:String):Boolean={
+    (typeValue.equals(regexOp.name))
+  }
+
+  //what is the minimum cost that prevents this match
+  def preventNegative(negativeNode:RegexNodeIndex):this.type ={
+    if(canMatch(negativeNode)){
+      //remove the or elements or speicalize the or elements
+
+    }
+  }
+
   def setMatchTxt(matchTxt:String):this.type = {
     this.matchTxt = matchTxt
     this
@@ -117,6 +129,7 @@ case class RegexNodeIndex(var indice:Int, var regexOp: RegexOp, var elems:Seq[Re
     if(matchTxt.isEmpty || matchGroup.isEmpty || matchValue.isEmpty) false
     else true
   }
+
 
 
   def canMatchMain(rightNodeAny: Any): Boolean = {
