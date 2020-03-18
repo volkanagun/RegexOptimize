@@ -8,7 +8,6 @@ import scala.util.Random
 object PatternReader {
 
   def readCSV(folder: String, rate: Double): Seq[(String, Boolean)] = {
-
     val elems = new File(folder).listFiles().flatMap(
       filename => Source.fromFile(filename, "UTF-8").getLines().map(line => {
         val lineElems = line.split("\\,")
@@ -18,8 +17,9 @@ object PatternReader {
       }))
 
     Random.shuffle(elems.toList).take((elems.length * rate).toInt)
-
   }
+
+
 
 
 

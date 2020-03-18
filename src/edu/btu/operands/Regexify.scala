@@ -82,11 +82,6 @@ object Regexify {
     largeSpaceText.substring(0, count)
   }
 
-  def preventNegatives(positiveNode: RegexNodeIndex, negativeNode:RegexNodeIndex):RegexNodeIndex={
-    if(positiveNode.canMatch(negativeNode)){
-
-    }
-  }
 
   def optionalSequence(seq: Seq[RegexNodeIndex]): RegexNodeIndex = {
     val rvalue = "(" + seq.map(rnode => "(" + rnode.matchValue + ")") + "?)"

@@ -24,9 +24,11 @@ class SinglePositiveApprox extends AbstractRegexSearch() {
     sourceTargets.foreach { case (source, target) => {
 
       val (sizex, sizey) = (source.length, target.length)
+
       for (i <- 0 until sizex) {
         var prevMatching = 0
         val breaking = Breaks
+
         breaking.breakable {
           for (j <- 0 until sizey) {
 

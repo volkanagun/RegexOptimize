@@ -23,51 +23,6 @@ case class RegexOp(name:String, count:Int = -1) extends Serializable {
 
   def copy() = RegexOp(name, count).setContainer(containerNode)
 
-/*
-  def copy(): RegexOp = {
-    SimpleOp(matchTxt, value, group)
-  }
-
-  def toOptionalNode():RegexNode={
-    RegexNode(toOptional(), containerNode.elems)
-  }*/
-
-  /*def toOptional(): RegexOp = {
-    this match {
-      case SimpleOp(txt, nvalue, noptype) => SimpleOp(txt, "(" + nvalue + ")?", Regexify.optional)
-      case OrGroupOp(txt, nvalue, noptype, min, max) => OrGroupOp(txt, "(" + nvalue + "?)", Regexify.optional, min, max)
-    }
-  }
-
-
-  def toRegular(): RegexOp = {
-    this match {
-      case op: SimpleOp => op
-      case orGroupOp: OrGroupOp => orGroupOp
-    }
-  }
-
-  def toUntil(): RegexOp = {
-    this match {
-      case SimpleOp(txt, nvalue, noptype) => SimpleOp(txt, "(" + nvalue + ")?", Regexify.optional)
-      case OrGroupOp(txt, nvalue, noptype, min, max) => OrGroupOp(txt, nvalue, noptype, min, max)
-    }
-  }
-
-  override def hashCode(): Int = {
-    val state = Seq(group)
-    state.map(_.hashCode()).foldLeft(0)((a, b) => 31 * a + b)
-  }
-
-  def canEqual(other: Any): Boolean = other.isInstanceOf[RegexOp]
-
-  override def equals(other: Any): Boolean = other match {
-    case that: RegexOp =>
-      (that canEqual this) &&
-        group == that.group && value==that.value && matchTxt == that.matchTxt
-    case _ => false
-  }*/
-
 }
 
 case class Search(left: Seq[RegexNodeIndex], medium: Seq[RegexNodeIndex], right: Seq[RegexNodeIndex]) extends Serializable

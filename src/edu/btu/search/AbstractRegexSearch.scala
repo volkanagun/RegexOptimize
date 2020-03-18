@@ -1,6 +1,6 @@
 package edu.btu.search
 
-import edu.btu.operands.{RegexNode, RegexNodeIndex, RegexOp, Regexify}
+import edu.btu.operands.{Path, RegexNode, RegexNodeIndex, RegexOp, Regexify}
 
 
 abstract class AbstractRegexSearch() extends Serializable {
@@ -11,7 +11,7 @@ abstract class AbstractRegexSearch() extends Serializable {
 
   def search(): Seq[Matrix]
 
-  def searchFast():Seq[Path]
+  def searchFast(): Seq[Path]
 
   def regexify(value: String): RegexNodeIndex
 
@@ -37,7 +37,6 @@ abstract class AbstractRegexSearch() extends Serializable {
     matrix
 
   }
-
 
 
   def initMatrix(sizex: Int, sizey: Int): Array[Array[CellContent]] = {
@@ -353,23 +352,41 @@ abstract class AbstractRegexSearch() extends Serializable {
 
   }
 
- def searchDirectionalWithNegative(): Seq[Path] = {
+  //find the minimum change for rejecting the negative
+  def searchDirectionalWithNegative(): Seq[Path] = {
 
-   val positiveZip1 = positives.zipWithIndex
-   val positiveZip2 = positives.zipWithIndex
-   val negativeZip1 = negatives.zipWithIndex
+    val positiveZip1 = positives.zipWithIndex
+    val positiveZip2 = positives.zipWithIndex
+    val negativeZip1 = negatives.zipWithIndex
+    val negativeZip2 = negatives.zipWithIndex
 
-    val sourceTargets = positiveZip1.par.flatMap(pos1 => positiveZip2.map(pos2 => (pos1, pos2)))
+    val positiveSourceTargets = positiveZip1.par.flatMap(pos1 => positiveZip2.map(pos2 => (pos1, pos2)))
       .filter { case (source, target) => source._2 > target._2 }.map { case (source, target) => (source._1, target._1) }
 
     val path = new Path()
 
-    val paths = sourceTargets.flatMap { case (source, target) => {
+    val pathPositives = positiveSourceTargets.flatMap { case (source, target) => {
       searchDirectional(path, source, target, 0, 0)
     }
     }
 
-    paths.toArray.toSeq
+    val negativeSourceTargets = negativeZip1.par.flatMap(pos1 => negativeZip2.map(pos2 => (pos1, pos2)))
+      .filter { case (source, target) => source._2 > target._2 }.map { case (source, target) => (source._1, target._1) }
+
+
+    val pathNegatives = negativeSourceTargets.flatMap { case (source, target) => {
+      searchDirectional(path, source, target, 0, 0)
+    }}
+
+    val pathCombined = pathPositives.flatMap(positive => {
+      pathNegatives.map(
+        negative => {
+
+        }
+      )
+    })
+
+
 
   }
 
@@ -384,8 +401,8 @@ abstract class AbstractRegexSearch() extends Serializable {
     val sourceSize = sourceTargets.map(_._1.length).max
     val targetSize = sourceTargets.map(_._2.length).max
 
-    val sourceNodes = Range(0, sourceSize).map(i=> RegexNodeIndex(i, RegexOp(Regexify.or)))
-    val targetNodes = Range(0, targetSize).map(i=> RegexNodeIndex(i, RegexOp(Regexify.or)))
+    val sourceNodes = Range(0, sourceSize).map(i => RegexNodeIndex(i, RegexOp(Regexify.or)))
+    val targetNodes = Range(0, targetSize).map(i => RegexNodeIndex(i, RegexOp(Regexify.or)))
 
     val (sources, targets) = sourceTargets.foldLeft[(Seq[RegexNodeIndex], Seq[RegexNodeIndex])]((sourceNodes, targetNodes)) {
       case ((source, target), (nextSource, nextTarget)) => {
