@@ -1,6 +1,6 @@
 package edu.btu.search
 
-import edu.btu.operands.{Path, RegexNode, RegexNodeIndex, RegexOp, Regexify}
+import edu.btu.operands.{Cell, Path, RegexNode, RegexNodeIndex, RegexOp, Regexify}
 
 
 abstract class AbstractRegexSearch() extends Serializable {
@@ -381,7 +381,7 @@ abstract class AbstractRegexSearch() extends Serializable {
     val pathCombined = pathPositives.flatMap(positive => {
       pathNegatives.map(
         negative => {
-
+          positive.negativePath(negative)
         }
       )
     })

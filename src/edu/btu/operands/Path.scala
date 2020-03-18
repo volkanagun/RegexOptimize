@@ -1,7 +1,6 @@
 package edu.btu.operands
 
-import edu.btu.search.{Cell, RegexParam}
-
+import scala.util.control.Breaks
 
 
 case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Serializable {
@@ -12,7 +11,13 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
     this
   }
 
+  def addCell(addCells: Seq[Cell]): this.type = {
+    cells ++= addCells
+    this
+  }
+
   def addCell(cell: Cell, blockCost: Double, zigzagCost: Double): this.type = {
+
     if (cells.isEmpty) {
       addCell(cell, blockCost)
     }
@@ -24,8 +29,8 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
         cells :+= cell
         cost = cost + blockCost + zigzagCost
       }
-
     }
+
     this
   }
 
@@ -64,6 +69,36 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
     }
   }
 
+
+  def negativePath(negative: Path): Path = {
+    val minSize = math.min(negative.cells.length, cells.length)
+    val newPath = Path()
+    var i = 0
+
+    while (i < minSize) {
+      val negCell = negative.cells(i)
+      val crrCell = cells(i).copy()
+      val newCells = crrCell.negativeCombinations(negCell)
+      val optCell = newCells.find(cell => cell.negativeSelf())
+
+      optCell match {
+        case Some(cell) => {
+          newPath.addCell(cell, cell.cost)
+        }
+        case None => {
+          newPath.addCell(crrCell, crrCell.cost)
+        }
+      }
+
+      i += 1
+    }
+
+    if (i < cells.length)
+      newPath.addCell(cells.slice(i, cells.length))
+    else
+      newPath
+
+  }
 
   def summarize(): this.type = {
 
@@ -118,7 +153,7 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
     toOrRegex(cells, new RegexParam())
   }
 
-  def toOrRegex(cells: Seq[Cell], newParam: RegexParam): RegexParam = {
+  private def toOrRegex(cells: Seq[Cell], newParam: RegexParam): RegexParam = {
 
     val crrCell = cells.head
     val nextCells = cells.tail

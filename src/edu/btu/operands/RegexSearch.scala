@@ -1,6 +1,6 @@
 package edu.btu.operands
 
-import edu.btu.search.{AbstractRegexSearch, Cell, Matrix, Path}
+import edu.btu.search.{AbstractRegexSearch, Matrix}
 
 import scala.util.control.Breaks
 

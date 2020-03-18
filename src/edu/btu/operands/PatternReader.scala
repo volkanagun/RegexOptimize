@@ -8,6 +8,7 @@ import scala.util.Random
 object PatternReader {
 
   def readCSV(folder: String, rate: Double): Seq[(String, Boolean)] = {
+
     val elems = new File(folder).listFiles().flatMap(
       filename => Source.fromFile(filename, "UTF-8").getLines().map(line => {
         val lineElems = line.split("\\,")
@@ -20,7 +21,15 @@ object PatternReader {
   }
 
 
+  def main(args: Array[String]): Unit = {
 
+    var i = 0;
 
+    for( i <- 0 until 10) {
+
+    }
+
+    System.out.println(i)
+  }
 
 }

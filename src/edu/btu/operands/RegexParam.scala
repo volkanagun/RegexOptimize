@@ -1,0 +1,196 @@
+package edu.btu.operands
+
+
+import scala.collection.immutable.Stack
+
+
+class RegexParam extends Serializable {
+
+  var regex: String = ""
+  var optional: String = ""
+  var or: String = ""
+  var sourceContinue: String = ""
+  var targetContinue: String = ""
+  var count: Int = 0
+  var mainRegex = ""
+
+  var sourceOptional = Stack[RegexNodeIndex]()
+  var targetOptional = Stack[RegexNodeIndex]()
+  var regexStack = Stack[RegexNodeIndex]()
+
+  var prevCell: Cell = null
+
+
+  private def stackTop(optionalStack: Stack[RegexNodeIndex], regexNode: RegexNodeIndex): (Stack[RegexNodeIndex], RegexNodeIndex) = {
+    if (optionalStack.isEmpty) {
+      (optionalStack.push(regexNode), regexNode)
+    }
+    else if (optionalStack.top.canMatch(regexNode)) {
+      (optionalStack, regexNode)
+    }
+    else {
+      (optionalStack.push(regexNode), regexNode)
+    }
+  }
+
+  def sourceTop(regexNode: RegexNodeIndex): RegexNodeIndex = {
+    val (ss, newNode) = stackTop(sourceOptional, regexNode)
+    sourceOptional = ss
+    newNode
+  }
+
+  def targetTop(regexNode: RegexNodeIndex): RegexNodeIndex = {
+    val (ss, newNode) = stackTop(targetOptional, regexNode)
+    targetOptional = ss
+    newNode
+  }
+
+  def regexTop(regexNode: RegexNodeIndex): RegexNodeIndex = {
+    val (ss, newNode) = stackTop(regexStack, regexNode)
+    regexStack = ss
+    newNode
+  }
+
+  def addRegex(regexNode: RegexNodeIndex): this.type = {
+    regexStack = regexStack.push(regexNode)
+    this
+  }
+
+  def removeTopEqual(optionalStack: Stack[RegexNodeIndex], regexNode: RegexNodeIndex): Stack[RegexNodeIndex] = {
+    if (!optionalStack.isEmpty && optionalStack.top.canMatch(regexNode)) {
+      optionalStack.pop
+    }
+    else {
+      optionalStack
+    }
+  }
+
+  def largestIndice(pair:(RegexNodeIndex, RegexNodeIndex)):RegexNodeIndex={
+    if(pair._1.indice >= pair._2.indice) pair._1
+    else pair._2
+  }
+
+
+  def constructRegex(): String = {
+
+    var regexStr = regexStack.reverse.map(node => node.toRegex()).mkString("")
+    regexStack = Stack()
+    var regexSrcOpt = ""
+    var regexTrtOpt = ""
+
+    var srcOpt: RegexNodeIndex = null;
+    var trtOpt: RegexNodeIndex = null;
+
+
+    while (!sourceOptional.isEmpty || !targetOptional.isEmpty) {
+
+
+      if (!sourceOptional.isEmpty && !targetOptional.isEmpty) {
+        val s = sourceOptional.pop2
+        srcOpt = s._1
+        sourceOptional = s._2
+
+        val t = targetOptional.pop2
+        trtOpt = t._1
+        targetOptional = t._2
+
+        regexSrcOpt = srcOpt.matchValue + regexSrcOpt
+        regexTrtOpt = trtOpt.matchValue + regexTrtOpt
+
+
+      }
+      else if (!sourceOptional.isEmpty) {
+
+        val s = sourceOptional.pop2
+        srcOpt = s._1;
+        sourceOptional = s._2
+
+        regexSrcOpt = srcOpt.matchValue + regexSrcOpt
+
+      }
+      else if (!targetOptional.isEmpty) {
+        val t = targetOptional.pop2
+        trtOpt = t._1;
+        targetOptional = t._2
+
+        regexTrtOpt = trtOpt.matchValue + regexTrtOpt
+      }
+
+
+    }
+
+    (if(regexTrtOpt.isEmpty && regexSrcOpt.isEmpty) regexStr
+    else if(regexSrcOpt.isEmpty) "("+regexTrtOpt +"?)" + regexStr
+    else if(regexTrtOpt.isEmpty) "("+regexSrcOpt+"?)" + regexStr
+    else "("+regexSrcOpt+"|"+regexTrtOpt+"?)"+regexStr)
+
+  }
+
+  def updateRegex():String = {
+    mainRegex = mainRegex + constructRegex()
+    mainRegex
+  }
+
+  def sourceTop(): RegexNodeIndex = {
+    if (sourceOptional.isEmpty) null
+    else sourceOptional.top
+  }
+
+  def sourceRemove(regexNode: RegexNodeIndex): this.type = {
+    sourceOptional = removeTopEqual(sourceOptional, regexNode)
+    this
+  }
+
+  def targetRemove(regexNode: RegexNodeIndex): this.type = {
+    targetOptional = removeTopEqual(targetOptional, regexNode)
+    this
+  }
+
+  def regexRemove(regexNode: RegexNodeIndex): this.type = {
+    regexStack = removeTopEqual(regexStack, regexNode)
+    this
+  }
+
+
+  def targetTop(): RegexNodeIndex = {
+    if (targetOptional.isEmpty) null
+    else targetOptional.top
+  }
+
+
+  def setPrevCell(cell: Cell): this.type = {
+    this.prevCell = cell
+    this
+  }
+
+  def setRegex(regex: String): this.type = {
+    this.regex = regex
+    this
+  }
+
+  def setOptional(regex: String): this.type = {
+    this.optional = regex
+    this
+  }
+
+  def setOr(regex: String): this.type = {
+    this.or = regex
+    this
+  }
+
+  def setSource(source: String): this.type = {
+    this.sourceContinue = source
+    this
+  }
+
+  def setTarget(target: String): this.type = {
+    this.targetContinue = target
+    this
+  }
+
+  def setCount(count: Int): this.type = {
+    this.count = count
+    this
+  }
+
+}

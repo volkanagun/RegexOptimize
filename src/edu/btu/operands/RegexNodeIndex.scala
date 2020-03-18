@@ -35,6 +35,7 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
     (typeValue.equals(regexOp.name))
   }
 
+
   //what is the minimum change with minimum cost that prevents this match
   def negative(negativeNode: RegexNodeIndex): Boolean = {
     val matches = matchesByRegex(negativeNode)
