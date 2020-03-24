@@ -1,10 +1,9 @@
 package edu.btu.search
-import edu.btu.operands.{RegexNode, RegexNodeIndex, Regexify}
+import edu.btu.operands.{Cell, Path, RegexNode, RegexNodeIndex, Regexify}
 
 import scala.util.control.Breaks
 
 class MultiPositiveApprox() extends AbstractRegexSearch() {
-
 
 
   override def search(): Seq[Matrix] = {
@@ -87,8 +86,11 @@ class MultiPositiveApprox() extends AbstractRegexSearch() {
   }
 
 
-  override def searchFast(): Seq[Path] = {
-    searchMultiDirectional()
+  override def searchDirectional(): Seq[Path] = {
+    searchMultiDirectional(positives)
+  }
+  override def searchNegative(): Seq[Path] = {
+    searchMultiDirectional(negatives)
   }
 
   override def regexify(value: String): RegexNodeIndex = {

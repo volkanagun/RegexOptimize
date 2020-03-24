@@ -9,7 +9,6 @@ case class Cell(i: Int, j: Int, var source: RegexNodeIndex = null, var target: R
   var colEnd = false;
   var isNegative = false;
 
-
   def copy():Cell={
     val cell = Cell(i, j, source.copy(), target.copy(), matching, cost)
     cell.rowEnd = rowEnd

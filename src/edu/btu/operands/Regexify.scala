@@ -133,32 +133,30 @@ object Regexify {
       while (i < elems.length) {
 
         val crrGroup = elems(i).matchGroup
-        var nxtValue = elems(i).matchTxt
+        var count = 0;
+        var j = i + 1;
+        var nxtValue = elems(j).matchTxt
 
-        val start = i;
-        var done = false
-
-        while (i < elems.length && nxtValue.matches(crrGroup)) {
-          nxtValue = elems(i).matchTxt
-          i += 1;
-          done = true
+        while (j < elems.length && nxtValue.matches(crrGroup)) {
+          nxtValue = elems(j).matchTxt
+          j += 1;
+          count += 1;
         }
 
-        i = i - 1;
-        if (i == start && done) {
-          nRegexNodeIndex = nRegexNodeIndex.add(constructByCount(elems.slice(i, i + 1), crrGroup));
-          breaking.break();
+        if (count > 0 && j == elems.length) {
+          nRegexNodeIndex = nRegexNodeIndex.add(constructByCount(elems.slice(i, j), crrGroup));
+          i = j;
         }
-        else if (i == start) {
-          breaking.break();
+        else if (count > 0) {
+          nRegexNodeIndex = nRegexNodeIndex.add(constructByCount(elems.slice(i, i + count), crrGroup));
+          i = j - 1
         }
-        else if (i < elems.length - 1) {
-          nRegexNodeIndex = nRegexNodeIndex.add(constructByCount(elems.slice(start, i), crrGroup));
+        else if (count == 0) {
+          nRegexNodeIndex = nRegexNodeIndex.add(elems(i));
+          i = i +1
         }
-        else {
-          //i+=1
-          nRegexNodeIndex = nRegexNodeIndex.add(constructByCount(elems.slice(start, i), crrGroup));
-        }
+
+
 
       }
     }
@@ -215,6 +213,7 @@ object Regexify {
     else if (char == '+' || char == '-') "\\" + char
     else char.toString
   }
+
 
   /**
    * Match group, value, txt

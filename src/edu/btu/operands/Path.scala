@@ -5,6 +5,8 @@ import scala.util.control.Breaks
 
 case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Serializable {
 
+  var negative = false
+
   def addCell(cell: Cell, blockCost: Double): this.type = {
     cells :+= cell
     cost += blockCost
@@ -34,8 +36,14 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
     this
   }
 
+  def setNegative(value:Boolean):this.type = {
+    negative = value;
+    this
+  }
+
   def copy(): Path = {
     Path(cells, cost)
+      .setNegative(negative)
   }
 
   def hasLastCell(): Boolean = {
@@ -70,12 +78,13 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
   }
 
 
-  def negativePath(negative: Path): Path = {
+  def newPath(negative: Path): Path = {
     val minSize = math.min(negative.cells.length, cells.length)
     val newPath = Path()
     var i = 0
-
+    var found = false
     while (i < minSize) {
+
       val negCell = negative.cells(i)
       val crrCell = cells(i).copy()
       val newCells = crrCell.negativeCombinations(negCell)
@@ -84,6 +93,7 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
       optCell match {
         case Some(cell) => {
           newPath.addCell(cell, cell.cost)
+          found = true
         }
         case None => {
           newPath.addCell(crrCell, crrCell.cost)
@@ -91,12 +101,14 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
       }
 
       i += 1
+
     }
 
     if (i < cells.length)
       newPath.addCell(cells.slice(i, cells.length))
+        .setNegative(found)
     else
-      newPath
+      newPath.setNegative(found)
 
   }
 

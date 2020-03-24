@@ -23,6 +23,9 @@ class RegexSearch() extends AbstractRegexSearch() {
   //go down while going down
 
 
+  override def searchDirectional(): Seq[Path] = ???
+
+  override def searchNegative(): Seq[Path] = ???
 
   def multiPositiveGroup(): Seq[Matrix] = {
 

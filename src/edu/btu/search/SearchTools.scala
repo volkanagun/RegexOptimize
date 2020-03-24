@@ -15,7 +15,6 @@ case class Matrix(source: Seq[RegexNodeIndex], target: Seq[RegexNodeIndex], cell
     getCellContent(i, j).cells
   }
 
-
   def getColSize(): Int = {
     if (cellContents.isEmpty) 0
     else cellContents.head.length
@@ -30,7 +29,6 @@ case class Matrix(source: Seq[RegexNodeIndex], target: Seq[RegexNodeIndex], cell
     if (from < getColSize()) cellContents(i).slice(from, getColSize())
     else Array()
   }
-
   /**
    * Merhaba arkadaşlar,
    *

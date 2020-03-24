@@ -104,7 +104,7 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
     matchValue = v
     matchGroup = g
     matchTxt = t
-    regexOp = RegexOp(Regexify.seq, -1)
+    regexOp = RegexOp(regexOp.name, -1)
 
     this
   }

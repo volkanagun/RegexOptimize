@@ -1,6 +1,6 @@
 package edu.btu.search
 
-import edu.btu.operands.{RegexNode, RegexNodeIndex, Regexify}
+import edu.btu.operands.{Cell, Path, RegexNode, RegexNodeIndex, Regexify}
 
 import scala.util.control.Breaks
 
@@ -96,7 +96,11 @@ class SinglePositiveExact() extends AbstractRegexSearch() {
     matrices.map({ case (source, target, content) => Matrix(source, target, content) })
   }
 
-  override def searchFast(): Seq[Path] = {
-    searchDirectional()
+  override def searchDirectional(): Seq[Path] = {
+    searchDirectionalRegular(positives)
+  }
+
+  override def searchNegative(): Seq[Path] = {
+    searchDirectionalRegular(negatives)
   }
 }

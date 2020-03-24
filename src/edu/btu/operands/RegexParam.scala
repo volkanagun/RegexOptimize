@@ -65,9 +65,65 @@ class RegexParam extends Serializable {
     }
   }
 
-  def largestIndice(pair:(RegexNodeIndex, RegexNodeIndex)):RegexNodeIndex={
-    if(pair._1.indice >= pair._2.indice) pair._1
+  def largestIndice(pair: (RegexNodeIndex, RegexNodeIndex)): RegexNodeIndex = {
+    if (pair._1.indice >= pair._2.indice) pair._1
     else pair._2
+  }
+
+  def constructRegexNode(): RegexNodeIndex = {
+
+    val mainNode = RegexNodeIndex(0, RegexOp("seq"), regexStack.reverse)
+    regexStack = Stack()
+
+    var regexSrcOpt = Seq[RegexNodeIndex]()
+    var regexTrtOpt = Seq[RegexNodeIndex]()
+
+    var srcOpt: RegexNodeIndex = null;
+    var trtOpt: RegexNodeIndex = null;
+
+    while (!sourceOptional.isEmpty || !targetOptional.isEmpty) {
+
+      if (!sourceOptional.isEmpty && !targetOptional.isEmpty) {
+        val s = sourceOptional.pop2
+        srcOpt = s._1
+        sourceOptional = s._2
+
+        val t = targetOptional.pop2
+        trtOpt = t._1
+        targetOptional = t._2
+
+        regexSrcOpt = srcOpt +: regexSrcOpt
+        regexTrtOpt = trtOpt +: regexTrtOpt
+      }
+      else if (!sourceOptional.isEmpty) {
+        val s = sourceOptional.pop2
+        srcOpt = s._1;
+        sourceOptional = s._2
+        regexSrcOpt = srcOpt +: regexSrcOpt
+      }
+      else if (!targetOptional.isEmpty) {
+        val t = targetOptional.pop2
+        trtOpt = t._1;
+        targetOptional = t._2
+        regexTrtOpt = trtOpt +: regexTrtOpt
+      }
+    }
+
+    if (regexSrcOpt.isEmpty && !regexTrtOpt.isEmpty) {
+      mainNode.elems = RegexNodeIndex(0, RegexOp(Regexify.optional), regexTrtOpt) +: mainNode.elems
+    }
+    else if (regexTrtOpt.isEmpty && !regexSrcOpt.isEmpty){
+      mainNode.elems = RegexNodeIndex(0, RegexOp(Regexify.optional), regexSrcOpt) +: mainNode.elems
+    }
+    else
+    {
+      val srcNode = RegexNodeIndex(0, RegexOp(Regexify.seq), regexSrcOpt)
+      val dstNode = RegexNodeIndex(0, RegexOp(Regexify.seq), regexTrtOpt)
+      mainNode.elems = RegexNodeIndex(0, RegexOp(Regexify.or), Seq(srcNode, dstNode)) +: mainNode.elems
+    }
+
+    mainNode
+
   }
 
 
@@ -75,6 +131,7 @@ class RegexParam extends Serializable {
 
     var regexStr = regexStack.reverse.map(node => node.toRegex()).mkString("")
     regexStack = Stack()
+
     var regexSrcOpt = ""
     var regexTrtOpt = ""
 
@@ -97,7 +154,6 @@ class RegexParam extends Serializable {
         regexSrcOpt = srcOpt.matchValue + regexSrcOpt
         regexTrtOpt = trtOpt.matchValue + regexTrtOpt
 
-
       }
       else if (!sourceOptional.isEmpty) {
 
@@ -119,14 +175,14 @@ class RegexParam extends Serializable {
 
     }
 
-    (if(regexTrtOpt.isEmpty && regexSrcOpt.isEmpty) regexStr
-    else if(regexSrcOpt.isEmpty) "("+regexTrtOpt +"?)" + regexStr
-    else if(regexTrtOpt.isEmpty) "("+regexSrcOpt+"?)" + regexStr
-    else "("+regexSrcOpt+"|"+regexTrtOpt+"?)"+regexStr)
+    (if (regexTrtOpt.isEmpty && regexSrcOpt.isEmpty) regexStr
+    else if (regexSrcOpt.isEmpty) "(" + regexTrtOpt + "?)" + regexStr
+    else if (regexTrtOpt.isEmpty) "(" + regexSrcOpt + "?)" + regexStr
+    else "(" + regexSrcOpt + "|" + regexTrtOpt + "?)" + regexStr)
 
   }
 
-  def updateRegex():String = {
+  def updateRegex(): String = {
     mainRegex = mainRegex + constructRegex()
     mainRegex
   }
