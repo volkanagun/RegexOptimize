@@ -39,9 +39,11 @@ trait RegexParser extends JavaTokenParsers with GroupAST {
 }
 
 trait ArithParser extends JavaTokenParsers with ArithAST {
+
   def expr: Parser[Expr] = chainl1(term, "+" ^^^ Add | "-" ^^^ Sub)
   def term = chainl1(factor, "*" ^^^ Mul | "/" ^^^ Div)
   def factor = floatingPointNumber ^^ Number | "(" ~> expr <~ ")"
+
 }
 
 object ArithParserCLI extends ArithParser {

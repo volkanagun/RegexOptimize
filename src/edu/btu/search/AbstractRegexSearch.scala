@@ -41,7 +41,6 @@ abstract class AbstractRegexSearch() extends Serializable {
 
   }
 
-
   def initMatrix(sizex: Int, sizey: Int): Array[Array[CellContent]] = {
 
     var matrix = Array[Array[CellContent]]()
@@ -132,7 +131,6 @@ abstract class AbstractRegexSearch() extends Serializable {
     })
   }
 
-
   protected def search(newCell: Cell, paths: Seq[Path], matrix: Matrix): Seq[Path] = {
 
     val updatePaths = if (paths.isEmpty) Seq(Path(Seq(newCell), newCell.cost))
@@ -150,7 +148,6 @@ abstract class AbstractRegexSearch() extends Serializable {
     }).sortBy(_.cost)
   }
 
-
   protected def search(newCell: Cell, paths: Seq[Path], matrix: Matrix, top: Int): Seq[Path] = {
 
     //updating current paths by adding or modifying the last cell
@@ -162,7 +159,6 @@ abstract class AbstractRegexSearch() extends Serializable {
 
     val returnPaths = (if (updateCells.isEmpty) updatePaths
     else updateCells.flatMap(updateCell => search(updateCell, updatePaths, matrix, top)))
-
 
     returnPaths.sortBy(_.cost).take(top)
   }
@@ -268,7 +264,6 @@ abstract class AbstractRegexSearch() extends Serializable {
     else 3.0
   }
 
-
   protected def searchDirectional(path: Path, source: Seq[RegexNodeIndex], target: Seq[RegexNodeIndex], i: Int, j: Int): Seq[Path] = {
 
     val sourceLength = source.length
@@ -342,12 +337,9 @@ abstract class AbstractRegexSearch() extends Serializable {
     val sourceTargets = nodeZip1.par.flatMap(pos1 => nodeZip2.map(pos2 => (pos1, pos2)))
       .filter { case (source, target) => source._2 > target._2 }.map { case (source, target) => (source._1, target._1) }
 
-
-
     val paths = sourceTargets.flatMap { case (source, target) => {
       searchDirectional(Path(), source, target, 0, 0)
-    }
-    }
+    }}
 
     paths.toArray.toSeq
 
