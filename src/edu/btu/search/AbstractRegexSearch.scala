@@ -191,7 +191,6 @@ abstract class AbstractRegexSearch() extends Serializable {
         }
         }
         .sortBy(_._2.cost).take(top)
-
     }
 
     updatePaths
@@ -361,21 +360,25 @@ abstract class AbstractRegexSearch() extends Serializable {
    */
   def searchDirectionalNegative(): Seq[Path] = {
 
-
     val pathPositives = searchDirectional()
     val pathNegatives = searchNegative()
 
-
     val pathCombined = pathPositives.flatMap(positive => {
-      pathNegatives.map(
-        negative => {
-          positive.newPath(negative)
-        }
-      )
-    }).filter(_.negative).toArray
+      pathNegatives.map(negative => {
+          positive.negativePath(negative)
+        })})
+      .filter(_.negative)
+      .toArray
 
     pathCombined
 
+  }
+
+
+  def createNode(leftPath:Path, rightPath:Path):RegexNodeIndex = {
+    val leftNode = leftPath.toOrRegex().constructRegexNode()
+    val rightNode = rightPath.toOrRegex().constructRegexNode()
+    leftNode.toOrNodeIndex(rightNode)
   }
 
 
@@ -394,14 +397,45 @@ abstract class AbstractRegexSearch() extends Serializable {
     val targetSeq = targetIndices.map(regexNodes(_))
 
     val sourceTargets =  sourceSeq.flatMap(pos1 => targetSeq.map(pos2 => (pos1, pos2)))
-    val newPaths = sourceTargets.flatMap{case(src, trt) => {
+    sourceTargets.flatMap{case(src, trt) => {
       searchDirectional(Path(), src, trt, 0, 0)
-    }}.map(path=> path.toOrRegex()
-      .updateRegex());
+    }}
+  }
+
+  def searchRegex(paths:Seq[Path]):Seq[String]={
+    val regexNodes = paths.map(crrPath => {
+      crrPath.toOrRegex().constructRegexNode()
+    }).distinct
+
+    val indices = for(x<-0 until regexNodes.length; y <-0 until regexNodes.length) yield (x, y)
+    val elems = indices.filter{case(x, y)=> x!=y}
+      .map{case(x, y)=> (regexNodes(x).toOrNodeIndex(regexNodes(y)))}
+
+    val regexes = elems.map(nodeIndex=> nodeIndex.toRegex())
+    regexes
+  }
+
+  def searchPositiveRegex(): Seq[String] = {
+    val paths = searchDirectional()
+    searchRegex(paths)
+  }
 
 
+  def searchNegativeRegex(): Seq[String] = {
+
+    val paths = searchDirectionalNegative()
+    searchRegex(paths)
 
   }
+
+  def searchMultiPositiveRegex(): Seq[String] = {
+
+    val paths = searchMultiDirectional(positives)
+    searchRegex(paths)
+
+  }
+
+
 
 
 }

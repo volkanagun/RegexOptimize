@@ -90,10 +90,8 @@ object RegexTest {
     val positive2 = "abc";
     val negative1 = "xyz";
     val negative2 = "xyz";
-
     /* val sequence3 = "prbabc";
      val sequence4 = "tlmabc";e*/
-
     test(Seq(positive0, positive1, positive2), Seq(negative1), method(methodIndex), 3)
   }
 
@@ -102,11 +100,10 @@ object RegexTest {
     else if (testIndex == 1) testZigzag(sequences, regexSearch)
     else if (testIndex == 2) testEfficient(sequences, regexSearch)
     else if (testIndex == 3) testOrEfficient(sequences, regexSearch)
-
   }
 
-  def test(positives: Seq[String], negatives:Seq[String], regexSearch: AbstractRegexSearch, testIndex: Int): Unit = {
-    if (testIndex == 3) testOrEfficient(positives,negatives, regexSearch)
+  def test(positives: Seq[String], negatives: Seq[String], regexSearch: AbstractRegexSearch, testIndex: Int): Unit = {
+    if (testIndex == 3) testOrEfficient(positives, negatives, regexSearch)
 
   }
 
@@ -118,14 +115,11 @@ object RegexTest {
   def cell(i: Int, j: Int, src: String, dst: String): Cell = Cell(i, j, node(src, i), node(dst, j))
 
 
-
   def cellFromString(i: Int, j: Int, src: String, dst: String): Cell = {
     val nsrc = src(i).toString
     val ndst = dst(j).toString
     Cell(i, j, node(nsrc, i), node(ndst, j))
   }
-
-
 
 
   def test1(): String = {
@@ -284,18 +278,25 @@ object RegexTest {
   }
 
   def testOrEfficient(sequences: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
+
     val paths = regexSearch.addPositive(sequences).searchDirectional()
       .sortBy(_.cost)
       .toArray
 
-    val regexes = paths.map(crrPath => {
-      crrPath.toOrRegex().updateRegex()
+    val regexNodes = paths.map(crrPath => {
+      crrPath.toOrRegex().constructRegexNode()
     }).distinct
 
+    val indices = for(x<-0 until regexNodes.length; y <-0 until regexNodes.length) yield (x, y)
+    val elems = indices.filter{case(x, y)=> x!=y}
+      .map{case(x, y)=> (regexNodes(x).toOrNodeIndex(regexNodes(y)))}
+    val regexes = elems.map(nodeIndex=> nodeIndex.toRegex())
+
     matchTest(regexes, sequences)
+
   }
 
-  def testOrEfficient(positives: Seq[String], negatives:Seq[String], regexSearch: AbstractRegexSearch): Unit = {
+  def testOrEfficient(positives: Seq[String], negatives: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
     val paths = regexSearch.addPositive(positives).addNegative(negatives).searchDirectionalNegative()
       .sortBy(_.cost)
       .toArray
@@ -317,6 +318,7 @@ object RegexTest {
     }).distinct
 
     matchTest(regexes, sequences)
+
   }
 
 

@@ -5,6 +5,18 @@ import scala.util.control.Breaks
 
 class MultiPositiveApprox() extends AbstractRegexSearch() {
 
+  override def searchRegex(): Seq[String] = {
+
+    val paths = searchDirectional()
+    val regexNodes = paths.map(crrPath => {
+      crrPath.toOrRegex().constructRegexNode()
+    }).distinct
+    val indices = for(x<-0 until regexNodes.length; y <-0 until regexNodes.length) yield (x, y)
+    val elems = indices.filter{case(x, y)=> x!=y}
+      .map{case(x, y)=> (regexNodes(x).toOrNodeIndex(regexNodes(y)))}
+    val regexes = elems.map(nodeIndex=> nodeIndex.toRegex())
+    regexes
+  }
 
   override def search(): Seq[Matrix] = {
 
@@ -12,7 +24,9 @@ class MultiPositiveApprox() extends AbstractRegexSearch() {
     val positiveZip2 = positives.zipWithIndex
 
     val sourceTargets = positiveZip1.flatMap(pos1 => positiveZip2.map(pos2 => (pos1, pos2)))
-      .filter { case (source, target) => source._2 > target._2 }.map { case (source, target) => (source._1, target._1) }
+      .filter { case (source, target) => source._2 > target._2 }.map {
+      case (source, target) => (source._1, target._1)
+    }
 
     val maxSize = positives.maxBy(_.length).length
     val contents = initMatrix(maxSize, maxSize)
@@ -25,7 +39,6 @@ class MultiPositiveApprox() extends AbstractRegexSearch() {
         val breaking = Breaks
         breaking.breakable {
           for (j <- 0 until sizey) {
-
             val cellContent = contents(i)(j)
 
             if (source(i).equalsByGroup(target(j))) {
@@ -96,6 +109,7 @@ class MultiPositiveApprox() extends AbstractRegexSearch() {
   override def regexify(value: String): RegexNodeIndex = {
     Regexify.continuousGrouping(value)
   }
+
 
 
 }

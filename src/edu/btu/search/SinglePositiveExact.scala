@@ -103,4 +103,5 @@ class SinglePositiveExact() extends AbstractRegexSearch() {
   override def searchNegative(): Seq[Path] = {
     searchDirectionalRegular(negatives)
   }
+
 }

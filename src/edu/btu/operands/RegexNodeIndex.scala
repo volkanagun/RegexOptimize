@@ -4,11 +4,11 @@ import scala.util.control.Breaks
 
 
 case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[RegexNodeIndex] = Seq()) {
+
   var matchTxt = ""
   var matchValue = ""
   var matchGroup = ""
   var index = 0
-
 
   regexOp.setContainer(this)
 
@@ -16,6 +16,39 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
 
   def canMatch(that: Any): Boolean = canMatchMain(that) && that.asInstanceOf[RegexNodeIndex].indice == indice
 
+  def isOr(): Boolean = {
+    Regexify.or.equals(regexOp.name) || Regexify.orgroup.equals(regexOp.name) || Regexify.orBracket.equals(regexOp.name) || Regexify.bracketCount.equals(regexOp.name)
+  }
+
+  def isSeq(): Boolean = {
+    Regexify.group.equals(regexOp.name) || Regexify.seq.equals(regexOp.name)
+  }
+
+  def isOptional(): Boolean = {
+    Regexify.optional.equals(regexOp.name) || Regexify.orbracketOptional.equals(regexOp.name)
+  }
+
+  def toOrNodeIndex(node: RegexNodeIndex): RegexNodeIndex = {
+    if (node.isOr() && (isSeq() || isOptional())) {
+      node.elems :+= this
+      node
+    }
+    else if ((node.isSeq() || node.isOptional()) && isOr()) {
+      elems :+= node
+      this
+    }
+    else if ((node.isSeq() && isSeq()) || (node.isOptional() && isOptional())) {
+      val nelems = elems :+ node
+      RegexNodeIndex(0, RegexOp(Regexify.seq), nelems)
+    }
+    else if (node.isOr() && isOr()) {
+      node.elems ++= elems
+      node
+    }
+    else {
+      null
+    }
+  }
 
   def toRegexNodeIndex(): RegexNodeIndex = {
     RegexNodeIndex(0, regexOp, elems.map(_.toRegexNodeIndex()))
@@ -30,6 +63,7 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
       .setMatchTxt(matchTxt)
       .setMatchGroup(matchGroup)
   }
+
 
   def isType(typeValue: String): Boolean = {
     (typeValue.equals(regexOp.name))
@@ -49,12 +83,12 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
       }
       false;
     }
-    else if(matches && !equalsByText(negativeNode)){
+    else if (matches && !equalsByText(negativeNode)) {
       //specialize
       matchGroup = matchValue
       true
     }
-    else if(matches){
+    else if (matches) {
       matchValue = "(?!" + negativeNode.matchTxt + ")" + matchValue
       true
     }

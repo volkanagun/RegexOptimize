@@ -8,6 +8,8 @@ class MultiPositiveExact() extends AbstractRegexSearch() {
 
   override def regexify(value: String): RegexNodeIndex = Regexify.direct(value)
 
+
+
   def search(): Seq[Matrix] = {
 
     val positiveZip1 = positives.zipWithIndex
@@ -93,6 +95,11 @@ class MultiPositiveExact() extends AbstractRegexSearch() {
     }
 
     Seq(Matrix(Seq(), Seq(), contents))
+  }
+
+
+  override def searchRegex(): Seq[String] = {
+
   }
 
   override def searchDirectional(): Seq[Path] = {

@@ -6,6 +6,25 @@ import scala.util.control.Breaks
 case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Serializable {
 
   var negative = false
+  var multiple = false
+
+  def setMultiple(multiple : Boolean):this.type = {
+    this.multiple = multiple
+    this
+  }
+
+  def getMultiple():Boolean = {
+    multiple
+  }
+
+  def setNegative(negative:Boolean):this.type ={
+    this.negative = negative
+    this
+  }
+
+  def getNegative():Boolean ={
+    negative
+  }
 
   def addCell(cell: Cell, blockCost: Double): this.type = {
     cells :+= cell
@@ -36,10 +55,7 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
     this
   }
 
-  def setNegative(value:Boolean):this.type = {
-    negative = value;
-    this
-  }
+
 
   def copy(): Path = {
     Path(cells, cost)
@@ -78,11 +94,13 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
   }
 
 
-  def newPath(negative: Path): Path = {
+  def negativePath(negative: Path): Path = {
+
     val minSize = math.min(negative.cells.length, cells.length)
     val newPath = Path()
     var i = 0
     var found = false
+
     while (i < minSize) {
 
       val negCell = negative.cells(i)
@@ -164,6 +182,7 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
   def toOrRegex(): RegexParam = {
     toOrRegex(cells, new RegexParam())
   }
+
 
   private def toOrRegex(cells: Seq[Cell], newParam: RegexParam): RegexParam = {
 

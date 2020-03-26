@@ -15,6 +15,7 @@ trait ArithAST {
 }
 
 trait GroupAST {
+
   sealed abstract class Expr
   case class Or(e1: Expr, e2: Expr) extends Expr
   case class Seq(e1: Expr, e2:Expr) extends Expr
@@ -23,12 +24,13 @@ trait GroupAST {
   case class BracketCount(e1: Expr) extends Expr
   case class Elem(e:Char) extends Expr
   case class Slash() extends Expr
+
 }
 
 trait RegexParser extends JavaTokenParsers with GroupAST {
 
 
-  def elem:Parser[Expr] = (Elem | "\\" ~ Elem)
+  def elem:Parser[Expr] = Elem | "\\" ~ Elem
   def expr: Parser[Expr] = chainl1(elem, "|" ^^^ Or)
   def group:Parser[Expr] = "(" ~> expr <~ ")"
   def bracket = Elem | "(" ~> expr <~ ")"
