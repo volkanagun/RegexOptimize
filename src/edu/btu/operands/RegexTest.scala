@@ -5,9 +5,7 @@ import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveEx
 object RegexTest {
 
   def main(args: Array[String]): Unit = {
-
     test9(3)
-
   }
 
   def method(i: Int): AbstractRegexSearch = {
@@ -279,7 +277,8 @@ object RegexTest {
 
   def testOrEfficient(sequences: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
 
-    val paths = regexSearch.addPositive(sequences).searchDirectional()
+    val paths = regexSearch.addPositive(sequences)
+      .searchDirectional()
       .sortBy(_.cost)
       .toArray
 

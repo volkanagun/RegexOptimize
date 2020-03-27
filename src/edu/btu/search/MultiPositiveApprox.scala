@@ -5,17 +5,6 @@ import scala.util.control.Breaks
 
 class MultiPositiveApprox() extends AbstractRegexSearch() {
 
-  override def searchRegex(): Seq[String] = {
-    val paths = searchDirectional()
-    val regexNodes = paths.map(crrPath => {
-      crrPath.toOrRegex().constructRegexNode()
-    }).distinct
-    val indices = for(x<-0 until regexNodes.length; y <-0 until regexNodes.length) yield (x, y)
-    val elems = indices.filter{case(x, y)=> x!=y}
-      .map{case(x, y)=> (regexNodes(x).toOrNodeIndex(regexNodes(y)))}
-    val regexes = elems.map(nodeIndex=> nodeIndex.toRegex())
-    regexes
-  }
 
   override def search(): Seq[Matrix] = {
 

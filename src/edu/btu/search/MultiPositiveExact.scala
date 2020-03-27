@@ -95,9 +95,6 @@ class MultiPositiveExact() extends AbstractRegexSearch() {
     Seq(Matrix(Seq(), Seq(), contents))
   }
 
-  override def searchRegex(): Seq[String] = {
-
-  }
 
   override def searchDirectional(): Seq[Path] = {
     searchMultiDirectional(positives)
@@ -105,4 +102,6 @@ class MultiPositiveExact() extends AbstractRegexSearch() {
   override def searchNegative(): Seq[Path] = {
     searchMultiDirectional(negatives)
   }
+
+
 }

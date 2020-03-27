@@ -99,5 +99,4 @@ class SinglePositiveApprox extends AbstractRegexSearch() {
     searchDirectionalRegular(negatives)
   }
 
-  override def searchRegex(): Seq[String] = ???
 }

@@ -378,15 +378,17 @@ abstract class AbstractRegexSearch() extends Serializable {
   protected def searchMultiDirectional(regexNodes:Seq[Seq[RegexNodeIndex]]): Seq[Path] = {
 
     val random = new Random(19)
-    val sourceIndices = Range(0, regexNodes.length/3)
-      .map{index => random.nextInt()}
+    val minMax = math.max(regexNodes.length/2, 1)
+
+    val sourceIndices = Range(0, minMax)
+      .map{index => random.nextInt(regexNodes.length)}
 
     val targetIndices = Range(0, regexNodes.length)
-      .map{index => random.nextInt()}
+      .map{index => random.nextInt(regexNodes.length)}
       .filter(!sourceIndices.contains(_))
 
-    val sourceSeq = sourceIndices.map(regexNodes(_))
-    val targetSeq = targetIndices.map(regexNodes(_))
+    val sourceSeq = sourceIndices.map(i=> regexNodes(i))
+    val targetSeq = targetIndices.map(i=> regexNodes(i))
 
     val sourceTargets =  sourceSeq.flatMap(pos1 => targetSeq.map(pos2 => (pos1, pos2)))
     sourceTargets.flatMap{case(src, trt) => {
@@ -420,12 +422,6 @@ abstract class AbstractRegexSearch() extends Serializable {
 
   }
 
-  def searchMultiPositiveRegex(): Seq[String] = {
-
-    val paths = searchMultiDirectional(positives)
-    searchRegex(paths)
-
-  }
 
 
 
