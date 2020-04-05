@@ -90,7 +90,7 @@ object RegexTest {
     val negative2 = "xyz";
     /* val sequence3 = "prbabc";
      val sequence4 = "tlmabc";e*/
-    test(Seq(positive0, positive1, positive2), Seq(negative1), method(methodIndex), 3)
+    test(Seq(positive0, positive1, positive2), Seq(negative1, negative2), method(methodIndex), 3)
   }
 
   def test(sequences: Seq[String], regexSearch: AbstractRegexSearch, testIndex: Int): Unit = {
@@ -296,7 +296,11 @@ object RegexTest {
   }
 
   def testOrEfficient(positives: Seq[String], negatives: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
-    val paths = regexSearch.addPositive(positives).addNegative(negatives).searchDirectionalNegative()
+
+    val paths = regexSearch
+      .addPositive(positives)
+      .addNegative(negatives)
+      .searchDirectionalNegative()
       .sortBy(_.cost)
       .toArray
 

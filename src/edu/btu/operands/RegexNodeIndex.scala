@@ -92,7 +92,7 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
       matchValue = "(?!" + negativeNode.matchTxt + ")" + matchValue
       true
     }
-    else false
+    else true
 
   }
 
