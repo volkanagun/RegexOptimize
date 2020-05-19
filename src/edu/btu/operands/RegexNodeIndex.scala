@@ -1,5 +1,6 @@
 package edu.btu.operands
 
+import scala.util.Random
 import scala.util.control.Breaks
 
 
@@ -11,6 +12,65 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
   var index = 0
 
   regexOp.setContainer(this)
+
+  def isEmpty():Boolean=elems.isEmpty
+
+  def getRndValue(rnd:Random):String={
+    if(rnd.nextBoolean()) matchValue else matchGroup
+  }
+
+  def getMatchValue():String={
+    "("+matchValue+")"
+  }
+
+  def setRegexOp(regexOp: RegexOp):this.type ={
+    this.regexOp = regexOp
+    this
+  }
+
+  def setRegexOpIfNotDefined(regexOp: RegexOp):this.type ={
+    if(!this.regexOp.isDefined()) this.regexOp = regexOp
+    this
+  }
+
+  def simplify():RegexNodeIndex={
+    //down to elements! reduce the height of the tree
+    if(elems.isEmpty){
+      this
+    }
+    else if(elems.length == 1){
+      val newNode = elems.head.setRegexOpIfNotDefined(regexOp)
+      newNode.simplify()
+    }
+    else if(isSeq() || isEmpty()){
+      elems = elems.flatMap(elem => if(elem.isEmpty()) Seq(elem) else elem.elems)
+      this
+    }
+    else {
+      elems = elems.map(_.simplify())
+      this
+    }
+  }
+
+  def toCell():Cell={
+    if(elems.length == 1){
+      elems.head.toCell()
+    }
+    else if(isOr()){
+      val source = elems.head
+      val target = if(elems.length > 2) {
+        RegexNodeIndex(index, regexOp, elems.tail)
+      }
+      else {
+        elems.last
+      }
+      Cell(source.index, target.index, source, target)
+    }
+    else{
+      Cell(index, index, this, this)
+    }
+  }
+
 
   def canEqual(that: Any): Boolean = canEqualMain(that) && that.asInstanceOf[RegexNodeIndex].indice == indice
 
@@ -71,6 +131,7 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
 
 
   //what is the minimum change with minimum cost that prevents this match
+  //if no change is needed return true
   def negative(negativeNode: RegexNodeIndex): Boolean = {
     val matches = matchesByRegex(negativeNode)
 
@@ -85,11 +146,11 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
     }
     else if (matches && !equalsByText(negativeNode)) {
       //specialize
-      matchGroup = matchValue
+      matchGroup = getMatchValue()
       true
     }
     else if (matches) {
-      matchValue = "(?!" + negativeNode.matchTxt + ")" + matchValue
+      matchValue = "(?!" + negativeNode.matchTxt + ")" + getMatchValue()
       true
     }
     else true
@@ -118,6 +179,11 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
   def toRegex(): String = {
     val (matchValue, matchGroup, mathcTxt) = Regexify.toRegex(this)
     matchValue
+  }
+  def toRandomRegex(seed:Int): String = {
+    val rndBoolean = new Random(seed).nextBoolean()
+    val (matchValue, matchGroup, mathcTxt) = Regexify.toRegex(this)
+    if(rndBoolean) matchValue else matchGroup
   }
 
 
@@ -169,7 +235,7 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
   }
 
   def matchesByRegex(rightNode: RegexNodeIndex): Boolean = {
-    matchTxt.matches(rightNode.matchValue)
+    matchTxt.matches(rightNode.getMatchValue())
   }
 
   def matchesByText(rightNode: RegexNodeIndex): Boolean = {
@@ -190,7 +256,6 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
   def canEqualMain(rightNodeAny: Any): Boolean = {
     val rightNode = rightNodeAny.asInstanceOf[RegexNodeIndex]
     equalsByRegex(rightNode) /* || equalsByGroup(rightNode)*/
-
   }
 
 

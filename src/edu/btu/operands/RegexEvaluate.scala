@@ -183,7 +183,6 @@ object RegexEvaluate {
     })
 
     positiveFilter.intersect(negativeFilter)
-
   }
 
   ///////////////////////////////////////////////////////////////

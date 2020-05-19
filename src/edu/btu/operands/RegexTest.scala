@@ -61,6 +61,7 @@ object RegexTest {
     val sequence1 = "xzabcx";
     val sequence2 = "xyefgx";
     val sequence3 = "xabcdx";
+
     test(Seq(sequence1, sequence2, sequence3), method(methodIndex), 0)
   }
 
@@ -94,10 +95,12 @@ object RegexTest {
   }
 
   def test(sequences: Seq[String], regexSearch: AbstractRegexSearch, testIndex: Int): Unit = {
+
     if (testIndex == 0) testRegular(sequences, regexSearch)
     else if (testIndex == 1) testZigzag(sequences, regexSearch)
     else if (testIndex == 2) testEfficient(sequences, regexSearch)
     else if (testIndex == 3) testOrEfficient(sequences, regexSearch)
+
   }
 
   def test(positives: Seq[String], negatives: Seq[String], regexSearch: AbstractRegexSearch, testIndex: Int): Unit = {
@@ -249,6 +252,7 @@ object RegexTest {
 
   def testRegular(sequences: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
     val matrices = regexSearch.addPositive(sequences).search()
+
     val paths = regexSearch.searchZigZagLoop(matrices, 10)
       .flatten
       .sortBy(_.cost)
@@ -296,7 +300,6 @@ object RegexTest {
   }
 
   def testOrEfficient(positives: Seq[String], negatives: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
-
     val paths = regexSearch
       .addPositive(positives)
       .addNegative(negatives)
@@ -309,6 +312,7 @@ object RegexTest {
     }).distinct
 
     matchTest(regexes, positives)
+    matchTest(regexes, negatives, false)
   }
 
 
@@ -325,11 +329,13 @@ object RegexTest {
   }
 
 
-  def matchTest(regexes: Seq[String], sequences: Seq[String]): Unit = {
+  def matchTest(regexes: Seq[String], sequences: Seq[String], positiveMatch: Boolean = true): Unit = {
 
     println("Regular expression count: " + regexes.length)
 
+
     regexes.foreach(regex => {
+      println(s"Should match all : ${positiveMatch}")
       sequences.foreach(sequence => {
         if (!sequence.matches("^" + regex + "$")) {
           println(s"No - match: ${sequence} and regex:${regex}")

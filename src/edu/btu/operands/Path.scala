@@ -8,32 +8,38 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
   var negative = false
   var multiple = false
 
-  def setMultiple(multiple : Boolean):this.type = {
+
+  def setMultiple(multiple: Boolean): this.type = {
     this.multiple = multiple
     this
   }
 
-  def getMultiple():Boolean = {
+  def getMultiple(): Boolean = {
     multiple
   }
 
-  def setNegative(negative:Boolean):this.type ={
+  def setNegative(negative: Boolean): this.type = {
     this.negative = negative
     this
   }
 
-  def getNegative():Boolean ={
+  def getNegative(): Boolean = {
     negative
   }
 
+  def simplify() : this.type = {
+    cells = cells.map(_.simplify())
+    this
+  }
+
   def addCell(cell: Cell, blockCost: Double): this.type = {
-    cells :+= cell
+    cells :+= cell.simplify()
     cost += blockCost
     this
   }
 
   def addCell(addCells: Seq[Cell]): this.type = {
-    cells ++= addCells
+    cells ++= addCells.map(_.simplify())
     this
   }
 
@@ -47,14 +53,13 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
         addCell(cell, blockCost)
       }
       else {
-        cells :+= cell
+        cells :+= cell.simplify()
         cost = cost + blockCost + zigzagCost
       }
     }
 
     this
   }
-
 
 
   def copy(): Path = {
@@ -93,6 +98,9 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
     }
   }
 
+  //rank by consuming order
+  //separate
+
 
   def negativePath(negative: Path): Path = {
 
@@ -101,21 +109,22 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
     var i = 0
     var found = false
 
-    while (i < minSize) {
+    while (i < minSize && !found) {
 
-      val negCell = negative.cells(i)
-      val crrCell = cells(i).copy()
-      val newCells = crrCell.negativeCombinations(negCell)
-      val optCell = newCells.find(cell => cell.negativeSelf())
+      val negCell = negative.cells(i).regexify()
+      val crrCell = cells(i).copy().regexify()
 
-      optCell match {
-        case Some(cell) => {
-          newPath.addCell(cell, cell.cost)
-          found = true
-        }
-        case None => {
-          newPath.addCell(crrCell, crrCell.cost)
-        }
+      val nodes = crrCell.negativeCombinations(negCell)
+        .map(cell=> (cell, cell.negativeSelf()))
+        .filter(_._2).map{_._1.source}
+
+      if(nodes.isEmpty){
+        newPath.addCell(crrCell, crrCell.cost)
+      }
+      else{
+        val cells = Regexify.searchPositives(nodes)
+        newPath.addCell(cells)
+        found = true
       }
 
       i += 1
@@ -130,54 +139,7 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
 
   }
 
-  def summarize(): this.type = {
 
-    var sources = Seq[RegexNodeIndex]()
-    var targets = Seq[RegexNodeIndex]()
-    var newCells = Seq[Cell]()
-
-    for (i <- 0 until cells.length) {
-      //decide down or right
-      val crrCell = cells(i)
-      val (crri, crrj) = (crrCell.i, crrCell.j)
-
-      if (crrCell.matching == 1 && crrCell.isCross()) {
-        sources = addNode(sources, crrCell.source)
-        targets = addNode(targets, crrCell.target)
-
-      }
-      else if (crrCell.isDown()) {
-        sources = addNode(sources, crrCell.source)
-        targets = addNode(targets, crrCell.target)
-
-      }
-      else if (crrCell.isRight()) {
-        sources = addNode(sources, crrCell.source)
-        targets = addNode(targets, crrCell.target)
-
-      }
-      else if (!sources.isEmpty && !targets.isEmpty) {
-        //or matching
-        if (sources.last.equals(crrCell.source)) sources = sources.take(sources.length - 1)
-        if (targets.last.equals(crrCell.target)) targets = targets.take(targets.length - 1)
-
-        newCells = newCells :+ toOrCell(1, 1, 1, sources, targets)
-        newCells :+= crrCell
-        sources = Seq()
-        targets = Seq()
-      }
-      else {
-        newCells :+= crrCell
-      }
-    }
-
-    if (!sources.isEmpty || !targets.isEmpty) {
-      newCells = newCells :+ toOrCell(1, 1, 1, sources, targets)
-    }
-
-    cells = newCells
-    this
-  }
 
   def toOrRegex(): RegexParam = {
     toOrRegex(cells, new RegexParam())
@@ -192,10 +154,10 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
 
     //need order between appends for reconstruction
     if ( /*crrCell.isCross() && */ crrCell.isEqualWithoutIndex()) {
-      newParam.addRegex(crrCell.largestIndice())
+      newParam.addRegex(crrCell)
       newParam.sourceRemove(crrCell.source)
       newParam.targetRemove(crrCell.target)
-      newParam.mainRegex += newParam.constructRegex()
+      //newParam.mainRegex += newParam.constructRegex()
     }
     else if (prevCell == null) {
       newParam.sourceTop(crrCell.source)
@@ -412,7 +374,6 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
       else if (newOptional.isEmpty && !prevParam.or.isEmpty) newRegex + "(" + prevParam.or + ")"
       else if (!prevParam.or.isEmpty) newRegex + "(" + prevParam.or + ")" + newOptional
       else newRegex
-
       Seq(finalRegex)
     }
     else if (prevParam.prevCell == null) {
@@ -575,12 +536,10 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
 
       }
       else if (prevParam.prevCell.matching != 4 && newParam.prevCell.matching == 4) {
-
         val newOptional = if (!prevParam.optional.isEmpty) prevParam.optional + ")(" + Regexify.toOrExactRegex(newParam.prevCell.source, newParam.prevCell.target)
         else "(" + Regexify.toOrExactRegex(newParam.prevCell.source, newParam.prevCell.target)
         newParam.setOptional(newOptional)
         toExactRegex(cells.tail, newParam)
-
       }
       else if (prevParam.prevCell.matching == 4 && newParam.prevCell.matching == 4) {
         val newOptional = prevParam.optional + newParam.prevCell.target.matchValue
@@ -599,5 +558,26 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
     toExactRegex(cells, new RegexParam())
   }
 
+  override def hashCode(): Int = super.hashCode()
 
+  override def equals(obj: Any): Boolean = {
+    if (canEqual(obj)) {
+      val ins = obj.asInstanceOf[Path]
+      val size = ins.cells.length
+
+      if (size == cells.length) {
+        return cells.zip(ins.cells).forall { case (cell1, cell2) => {
+          cell1.equals(cell2)
+        }}
+      }
+      false
+    }
+    else{
+      false;
+    }
+  }
+
+  override def canEqual(that: Any): Boolean = {
+    that.isInstanceOf[Path]
+  }
 }

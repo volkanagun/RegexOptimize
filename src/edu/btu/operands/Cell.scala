@@ -9,12 +9,24 @@ case class Cell(i: Int, j: Int, var source: RegexNodeIndex = null, var target: R
   var colEnd = false;
   var isNegative = false;
 
-  def copy():Cell={
+  def copy():Cell = {
     val cell = Cell(i, j, source.copy(), target.copy(), matching, cost)
     cell.rowEnd = rowEnd
     cell.colEnd = colEnd
     cell.isNegative = isNegative
     cell
+  }
+
+  def simplify():Cell={
+    if(source!=null) source = source.simplify()
+    if(target!=null) target = target.simplify()
+    this
+  }
+
+  def regexify():Cell={
+    if(source!=null) source = source.regexify()
+    if(target!=null) target = target.regexify()
+    this
   }
 
   def setNegative():this.type ={
@@ -67,9 +79,22 @@ case class Cell(i: Int, j: Int, var source: RegexNodeIndex = null, var target: R
     (isCross() && cell.isCross()) || (isDown() && cell.isDown()) || (isRight() && cell.isRight()) || (isCross() && (cell.isRight() || cell.isDown()))
   }
 
-  def negativeCombinations(cell:Cell):Array[Cell]={
-    Array(Cell(source.indice,cell.source.indice, source,   cell.source),  Cell(source.indice, cell.target.indice, source, cell.target),
-      Cell(target.indice, cell.source.indice, target, cell.source), Cell(target.indice, cell.target.indice, target, cell.target))
+  //remove or modify the negative cell from the current cell
+  def negativeCombinations(cell:Cell):Array[Cell] = {
+    if(equalSourceTarget() && cell.equalSourceTarget()) {
+      Array(Cell(source.indice, cell.source.indice,  source, cell.source))
+    }
+    else if(equalSourceTarget()) {
+      Array(Cell(source.indice, cell.source.indice,  source, cell.source), Cell(source.indice, cell.target.indice,  source, cell.target))
+    }
+    else if(cell.equalSourceTarget()) {
+      Array(Cell(source.indice, cell.source.indice, source, cell.source), Cell(target.indice, cell.source.indice, target, cell.source))
+    }
+    else
+    {
+      Array(Cell(source.indice,cell.source.indice, source,   cell.source),  Cell(source.indice, cell.target.indice, source, cell.target),
+        Cell(target.indice, cell.source.indice, target, cell.source), Cell(target.indice, cell.target.indice, target, cell.target))
+    }
   }
 
   def negativeAll(cell:Cell):Boolean={
@@ -88,6 +113,10 @@ case class Cell(i: Int, j: Int, var source: RegexNodeIndex = null, var target: R
 
   def negativeSelf():Boolean={
     source.negative(target)
+  }
+
+  def equalSourceTarget():Boolean = {
+    source.matchesByRegex(target)
   }
 
 
@@ -221,6 +250,7 @@ case class Cell(i: Int, j: Int, var source: RegexNodeIndex = null, var target: R
 
 
   def nextMinCells(matrix: Matrix): Seq[Cell] = {
+
     val sizex = matrix.cellContents.length
     val sizey = matrix.cellContents.head.length
     var nexts = Seq[Cell]()
@@ -255,4 +285,7 @@ case class Cell(i: Int, j: Int, var source: RegexNodeIndex = null, var target: R
       else sorted
     }
   }
+
+
+
 }

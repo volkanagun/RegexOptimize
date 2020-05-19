@@ -1,5 +1,7 @@
 package edu.btu.operands
 
+import edu.btu.search.SinglePositiveExact
+
 import scala.util.control.Breaks
 
 
@@ -51,7 +53,6 @@ object Regexify {
     if (source.equalsByValue(target)) source.matchValue
     else source.matchValue + "|" + target.matchValue
   }
-
 
 
   /*def orGroupLeft(mainNode: RegexNodeIndex, targetNode: RegexNodeIndex): RegexNodeIndex = {
@@ -115,8 +116,29 @@ object Regexify {
 
   def constructByCount(elems: Seq[RegexNodeIndex], matchGroup: String): RegexNodeIndex = {
     val nxtMatch = elems.map(_.matchTxt).mkString("")
-    val nregexOp = RegexOp(Regexify.bracketCount, elems.length)
-    RegexNodeIndex(0, nregexOp, elems).setMatchTxt(nxtMatch).setMatchGroup(matchGroup)
+    val nxtValue = elems.map(_.matchValue).mkString("")
+    val nregexOp = RegexOp(Regexify.seq, elems.length)
+    RegexNodeIndex(0, nregexOp, elems).setMatchTxt(nxtMatch)
+      .setMatchGroup(matchGroup)
+      .setMatchValue(nxtValue)
+  }
+
+
+  /*
+  Generalize reduces the pattern size, creates a unique pattern if possible
+  */
+  def searchPositives(nodes: Seq[RegexNodeIndex]): Seq[Cell] = {
+    if (nodes.length == 1) {
+      val newNode = nodes.head.simplify()
+      Seq(newNode.toCell())
+    }
+    else {
+      val searchMethod = new SinglePositiveExact()
+
+      val paths = searchMethod.addPositiveNodes(nodes).searchDirectional()
+      if (paths.isEmpty) Seq()
+      else paths.head.cells
+    }
   }
 
   def continousGrouping(mainNode: RegexNodeIndex): RegexNodeIndex = {
@@ -135,10 +157,11 @@ object Regexify {
         val crrGroup = elems(i).matchGroup
         var count = 0;
         var j = i + 1;
-        var nxtValue = elems(j).matchTxt
+        var nxtTxt = elems(j).matchTxt
+        var nxtVal = ""
 
-        while (j < elems.length && nxtValue.matches(crrGroup)) {
-          nxtValue = elems(j).matchTxt
+        while (j < elems.length && nxtTxt.matches(crrGroup)) {
+          nxtTxt = elems(j).matchTxt
           j += 1;
           count += 1;
         }
@@ -153,11 +176,8 @@ object Regexify {
         }
         else if (count == 0) {
           nRegexNodeIndex = nRegexNodeIndex.add(elems(i));
-          i = i +1
+          i = i + 1
         }
-
-
-
       }
     }
 
@@ -248,6 +268,7 @@ object Regexify {
     else regex
   }
 
+
   def toRegex(RegexNodeIndex: RegexNodeIndex): (String, String, String) = {
 
     RegexNodeIndex match {
@@ -264,7 +285,9 @@ object Regexify {
 
         if (opname != null && elems.length > 0) {
 
-          if (opname.equals(seq)) toRegex(elems, opname)
+          if (opname.equals(seq)) {
+            toRegex(elems, opname)
+          }
           else if (opname.equals(or)) toRegex(elems, opname, opcount, "|")
           else if (opname.equals(orBracket)) toRegex(elems, opname)
           else if (opname.equals(bracketCount)) toRegex(elems, opname, opcount)

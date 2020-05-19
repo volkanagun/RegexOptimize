@@ -21,6 +21,12 @@ case class RegexOp(name:String, count:Int = -1) extends Serializable {
     containerNode.regexify().regexOp
   }
 
+  def isDefined():Boolean={
+    !name.isEmpty
+  }
+
+
+
   def copy() = RegexOp(name, count).setContainer(containerNode)
 
 }
@@ -32,6 +38,10 @@ object RegexOp {
 
   //construct hierarchy of combines and score them
   //combine two regular expressions by searching the minimal combination length and maximum specificity
+
+  def emptyOp():RegexOp={
+    RegexOp("")
+  }
 
   def split(node: RegexNodeIndex, sequence: Seq[RegexNodeIndex]): Search = {
 
