@@ -10,6 +10,7 @@ abstract class AbstractRegexSearch() extends Serializable {
   var positives = Seq[Seq[RegexNodeIndex]]()
   var negatives = Seq[Seq[RegexNodeIndex]]()
   var additionalCost = 10d
+  var rnd:Random = null
 
   def search(): Seq[Matrix]
 
@@ -58,6 +59,11 @@ abstract class AbstractRegexSearch() extends Serializable {
 
   }
 
+  def setRandom(rnd:Random):this.type ={
+    this.rnd = rnd;
+    this
+  }
+
   def addPositiveNodes(seq:Seq[RegexNodeIndex]):this.type ={
     seq.foreach(item=> {
       positives = positives :+ Seq(item)
@@ -80,6 +86,12 @@ abstract class AbstractRegexSearch() extends Serializable {
     this
   }
 
+  def addPositive(samples: Set[String]): this.type = {
+    val sources = samples.map(regexify(_).elems)
+    positives ++= sources
+    this
+  }
+
   def addRandomPositive(samples:Seq[String]):this.type ={
     val sources = samples.map(regexify(_).elems.flatMap(r => if(r.isEmpty()) Seq(r) else  r.elems))
     positives ++= sources
@@ -93,6 +105,12 @@ abstract class AbstractRegexSearch() extends Serializable {
   }
 
   def addNegative(samples: Seq[String]): this.type = {
+    val sources = samples.map(regexify(_).elems)
+    negatives ++= sources
+    this
+  }
+
+  def addNegative(samples: Set[String]): this.type = {
     val sources = samples.map(regexify(_).elems)
     negatives ++= sources
     this
@@ -266,7 +284,6 @@ abstract class AbstractRegexSearch() extends Serializable {
     val sourceNode = cell.source
     val targetNode = cell.target
 
-
     if (path.hasLastCell()) {
       val lastCell = path.getLastCell()
 
@@ -281,9 +298,10 @@ abstract class AbstractRegexSearch() extends Serializable {
     else if (sourceNode.equalsByGroup(targetNode)) 1.0
     else if (sourceNode.matchesByGroup(targetNode)) 2.0
     else 3.0
+
   }
 
-  //looks buggy
+  //looks buggy looks fixed
   protected def searchDirectional(path: Path, source: Seq[RegexNodeIndex], target: Seq[RegexNodeIndex], i: Int, j: Int): Seq[Path] = {
 
     val sourceLength = source.length
@@ -293,7 +311,6 @@ abstract class AbstractRegexSearch() extends Serializable {
     val cell = Cell(i, j, sourceNode, targetNode)
 
     var paths = Seq[Path]()
-
     val blockCost = searchCost(path, cell)
 
     val nextPath = path.addCell(cell, blockCost, additionalCost)
@@ -335,6 +352,7 @@ abstract class AbstractRegexSearch() extends Serializable {
         if (canDown) paths ++= searchDirectional(path.copy(), source, target, di, dj)
         if (canCross) paths ++= searchDirectional(path.copy(), source, target, ci, cj)
       }
+
     }
     else {
       val (canRight, ri, rj) = goRight(cell, target.length)
@@ -350,15 +368,18 @@ abstract class AbstractRegexSearch() extends Serializable {
   }
 
   protected def searchDirectionalRegular(regexNodes:Seq[Seq[RegexNodeIndex]]): Seq[Path] = {
+
     val nodeZip1 = regexNodes.zipWithIndex
     val nodeZip2 = regexNodes.zipWithIndex
 
     val sourceTargets = nodeZip1.par.flatMap(pos1 => nodeZip2.map(pos2 => (pos1, pos2)))
-      .filter { case (source, target) => source._2 > target._2 }.map { case (source, target) => (source._1, target._1) }
+      .filter { case (source, target) => source._2 > target._2 }
+      .map { case (source, target) => (source._1, target._1) }
 
     val paths = sourceTargets.flatMap { case (source, target) => {
       searchDirectional(Path(), source, target, 0, 0)
     }}
+
 
     paths.toArray.toSeq
 
@@ -370,23 +391,20 @@ abstract class AbstractRegexSearch() extends Serializable {
    * @return
    */
   def searchDirectionalNegative(): Seq[Path] = {
-
     val pathPositives = searchDirectional()
     val pathNegatives = searchNegative()
 
     val pathCombined = pathPositives.map(positive => {
-
       var newPositive = positive
       pathNegatives.foreach(negative => {
           newPositive = newPositive.negativePath(negative)
         })
       newPositive
-
-    }).filter(_.negative).distinct
+    }).filter(_.negative)
+      .distinct
       .toArray
 
     pathCombined
-
   }
 
 
@@ -422,6 +440,7 @@ abstract class AbstractRegexSearch() extends Serializable {
       val nodes = allpaths.map(path=> Seq(path.toOrRegex().constructRegexNode()))
       searchMultiDirectional(nodes)
     }
+
   }
 
   def searchRegex(paths:Seq[Path]):Seq[String]={
@@ -432,9 +451,10 @@ abstract class AbstractRegexSearch() extends Serializable {
     val indices = for(x<-0 until regexNodes.length; y <-0 until regexNodes.length) yield (x, y)
     val elems = indices.filter{case(x, y)=> x!=y}
       .map{case(x, y)=> (regexNodes(x).toOrNodeIndex(regexNodes(y)))}
-
     val regexes = elems.map(nodeIndex=> nodeIndex.toRegex())
+
     regexes
+
   }
 
   def searchPositiveRegex(): Seq[String] = {
@@ -442,16 +462,9 @@ abstract class AbstractRegexSearch() extends Serializable {
     searchRegex(paths)
   }
 
-
   def searchNegativeRegex(): Seq[String] = {
-
     val paths = searchDirectionalNegative()
     searchRegex(paths)
-
   }
-
-
-
-
 
 }

@@ -2,7 +2,13 @@ package edu.btu.operands
 
 import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveExact, SinglePositiveApprox, SinglePositiveExact}
 
-object RegexTest {
+abstract class RegexGenerator {
+
+
+  def generate():Set[String]
+  def addPositives(positives:Set[String]):RegexGenerator
+  def addNegatives(negatives:Set[String]):RegexGenerator
+
 
   def main(args: Array[String]): Unit = {
     test9(3)
@@ -248,6 +254,8 @@ object RegexTest {
     regexStr
 
   }
+
+
 
 
   def testRegular(sequences: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
