@@ -1,5 +1,6 @@
-package edu.btu.task
+package edu.btu.task.tagmatch
 
+import scala.io.Source
 import scala.util.parsing.combinator.RegexParsers
 
 class TagMain(val tagName: String, val properties: Seq[(String, String)]) extends Serializable {
@@ -7,6 +8,13 @@ class TagMain(val tagName: String, val properties: Seq[(String, String)]) extend
   def toTagRegex(): TagRegex = {
     val map = properties.map { case (label, value) => label -> Set(value) }.toMap
     new TagRegex(tagName, map)
+  }
+
+
+  def toTagSample(filename:String, domain:String):TagSample={
+    new TagSample(tagName, properties)
+      .setFilename(filename)
+      .setDomain(domain)
   }
 
   override def toString: String = {
@@ -39,8 +47,8 @@ object TagMain {
     new TagMain(tagName, properties)
   }
 
-  def apply(line: String): TagMain = {
-    TagParser(line).toTagMain()
+  def apply(imgStr: String): TagMain = {
+    TagParser(imgStr).toTagMain()
 
   }
 }
@@ -89,6 +97,16 @@ object TagParser extends TagParser {
       }
     }
   }
+
+  //read directory
+  def read(filename:String):Seq[TagSample]={
+    Source.fromFile(filename, "UTF-8").getLines().map(line=> {
+      val Array(file, domain, image) = line.split("\\s+").toArray
+      TagSample(image,filename, domain)
+    }).toSeq
+  }
+
+
 
   def main(args: Array[String]) = {
     parse(tag, "<img class=\"deneme\" alt=\"100\" ban=\"23\">") match {

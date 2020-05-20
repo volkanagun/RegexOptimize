@@ -1,7 +1,4 @@
-package edu.btu.task
-
-import edu.btu.operands.{RegexGenerator, RegexSingleString, Regexify}
-import edu.btu.search.AbstractRegexSearch
+package edu.btu.task.tagmatch
 
 // Our interface
 trait Monoid[A] {
