@@ -30,6 +30,19 @@ object Convertor{
 //use implicit conversion
 class TagRegex(val tagName: String, val multimap: Map[String, Set[String]]) extends Serializable {
 
+  var mapPositiveRegex = Map[String, Set[String]]()
+  var mapNegativeRegex = Map[String, Set[String]]()
+
+  def intersect(tagRegexes:Seq[TagRegex]):this.type = {
+    tagRegexes.foreach{ right=> intersect(right)}
+    this
+  }
+
+  def difference(tagRegexes:Seq[TagRegex]):this.type ={
+    tagRegexes.foreach{right => difference(right)}
+    this
+  }
+
   def intersect(tagRegex: TagRegex): TagRegex = {
 
     val intersectedLabels = this.multimap.keySet.intersect(tagRegex.multimap.keySet)
@@ -43,7 +56,7 @@ class TagRegex(val tagName: String, val multimap: Map[String, Set[String]]) exte
 
   }
 
-  def difference(tagRegex: TagRegex):TagRegex={
+  def difference(tagRegex: TagRegex):TagRegex = {
     val intersectedLabels = this.multimap.keySet.intersect(tagRegex.multimap.keySet)
     val intersectedMap = intersectedLabels.map(label => {
       var crrValues = multimap(label)

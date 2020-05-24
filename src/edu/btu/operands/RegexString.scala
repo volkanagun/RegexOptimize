@@ -1,6 +1,7 @@
 package edu.btu.operands
 
 import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveExact, SinglePositiveApprox, SinglePositiveExact}
+import edu.btu.task.tagmatch.TimeBox
 
 import scala.util.Random
 
@@ -17,7 +18,24 @@ class RegexSingleString(val regexSearch:AbstractRegexSearch) extends RegexGenera
     this.negatives = this.negatives ++ negatives
     this
   }
-  override def generate():Set[String] = {
+
+  def filter(set:Set[String]):Set[String]={
+    set.filter(regex=> {
+      val matchAll = positives.forall(positive=> positive.matches(regex))
+      matchAll
+    })
+  }
+
+  def generateTimely():Set[String]={
+    val set = TimeBox.measureTime[Set[String]]("Regex-Single",generate())
+    filterTimely(set)
+  }
+
+  def filterTimely(set:Set[String]):Set[String]={
+    TimeBox.measureTime[Set[String]]("Regex-Single-Filter",filter(set))
+  }
+
+  def generate():Set[String] = {
     val paths = regexSearch.addPositive(positives)
       .searchDirectional()
       .sortBy(_.cost)
@@ -70,6 +88,15 @@ class RegexMultiString(val regexSearch:AbstractRegexSearch) extends RegexGenerat
     this
   }
 
+  def generateTimely():Set[String]={
+    val set = TimeBox.measureTime[Set[String]]("Regex-Multi",generate())
+    filterTimely(set)
+  }
+
+  def filterTimely(set:Set[String]):Set[String]={
+    TimeBox.measureTime[Set[String]]("Regex-Multi",filter(set))
+  }
+
   def generate() : Set[String] = {
 
     val paths = regexSearch.addPositive(positives)
@@ -89,6 +116,14 @@ class RegexMultiString(val regexSearch:AbstractRegexSearch) extends RegexGenerat
 
     regexes
 
+  }
+
+  def filter(set:Set[String]):Set[String] = {
+    set.filter(regex=> {
+      val matchAll = positives.forall(positive=> positive.matches(regex))
+      val notMatchAll = negatives.forall(negative => negative.matches(regex))
+      matchAll && notMatchAll
+    })
   }
 }
 

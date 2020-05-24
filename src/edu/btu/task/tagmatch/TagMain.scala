@@ -98,10 +98,23 @@ object TagParser extends TagParser {
     }
   }
 
-  //read directory
+  //read filename
   def read(filename:String):Seq[TagSample]={
     Source.fromFile(filename, "UTF-8").getLines().map(line=> {
       val Array(file, domain, image) = line.split("\\s+").toArray
+      TagSample(image,filename, domain)
+    }).toSeq
+  }
+
+  //read CSV
+  def readCSV(filename:String):Seq[TagSample]={
+    val lines = Source.fromFile(filename, "UTF-8").getLines()
+    val names = lines.next().split("(\\s+|\\t+)")
+    lines.map(line=> {
+      val mapping = names.zip(line.split("\\s+").toArray).toMap
+      val filename = mapping("Number")
+      val image = mapping("Scr")
+      val domain = mapping("WebSite")
       TagSample(image,filename, domain)
     }).toSeq
   }

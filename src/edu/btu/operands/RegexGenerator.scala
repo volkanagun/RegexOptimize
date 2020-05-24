@@ -5,7 +5,8 @@ import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveEx
 abstract class RegexGenerator {
 
 
-  def generate():Set[String]
+  def generateTimely():Set[String]
+
   def addPositives(positives:Set[String]):RegexGenerator
   def addNegatives(negatives:Set[String]):RegexGenerator
 
