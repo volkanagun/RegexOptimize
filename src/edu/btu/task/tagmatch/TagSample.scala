@@ -44,6 +44,10 @@ class TagSample(override val tagName: String, override val properties: Seq[(Stri
     this.isNegative = true
     this
   }
+  def setNegative(value:Boolean): this.type = {
+    this.isNegative = value
+    this
+  }
 
   def setFilename(filename: String): this.type = {
     this.filename = filename
@@ -116,5 +120,10 @@ object TagSample {
   def apply(imgStr: String, filename: String, domain: String): TagSample = {
     TagMain(imgStr)
       .toTagSample(filename, domain)
+  }
+
+  def apply(imgStr: String, filename: String, domain: String, negative:Boolean): TagSample = {
+    TagMain(imgStr)
+      .toTagSample(filename, domain).setNegative(negative)
   }
 }

@@ -11,6 +11,7 @@ object TimeBox {
     val result = f
     val end = System.nanoTime()
     append(name, end-start)
+
     result
   }
 
@@ -26,3 +27,4 @@ object TimeBox {
     }}
   }
 }
+

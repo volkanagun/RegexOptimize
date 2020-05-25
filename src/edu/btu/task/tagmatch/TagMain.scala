@@ -73,13 +73,13 @@ class TagParser extends RegexParsers {
     _.toString
   }
 
-  def value: Parser[String] = "[a-z\\d\"]+".r ^^ {
+  def value: Parser[String] = "[a-z\\d\"\\p{Punct}\\/]+".r ^^ {
     _.toString
   }
 
   def attribute: Parser[Attribute] = name ~ "=" ~ value ^^ { case wd ~ "=" ~ vl => Attribute(wd, vl) }
 
-  def tag: Parser[Tag] = "<img " ~> rep[Attribute](attribute) <~ ">" ^^ { case attrs => Tag("img", attrs) }
+  def tag: Parser[Tag] = "<img " ~> rep[Attribute](attribute) <~ "/>" ^^ { case attrs => Tag("img", attrs) }
 }
 
 object TagParser extends TagParser {
@@ -87,8 +87,9 @@ object TagParser extends TagParser {
   def apply(line: String): Tag = {
     parse(tag, line) match {
       case Success(matched, _) => matched
-      case Failure(msg, _) => {
+      case Failure(msg, a) => {
         println(s"ERROR: $line")
+        println(s"$a")
         Tag("img", Seq())
       }
       case Error(msg, _) => {
@@ -107,25 +108,37 @@ object TagParser extends TagParser {
   }
 
   //read CSV
-  def readCSV(filename:String):Seq[TagSample]={
+  def readCSV(filename:String):Seq[TagSample] = {
+
     val lines = Source.fromFile(filename, "UTF-8").getLines()
-    val names = lines.next().split("(\\s+|\\t+)")
+    val names = lines.next().split("(\\s+|\\t+)").filter(! _.contains("theImg"))
+    val regex = "(\\s+\"(.*?)>\"\\s)"
     lines.map(line=> {
-      val mapping = names.zip(line.split("\\s+").toArray).toMap
+      var image = regex.r.findAllIn(line).toArray.head.replaceFirst("\\/?>", " />")
+        .replaceAll("\"\"","\"").trim
+
+      image = image.substring(1, image.length-1)
+      val values = line.replaceFirst(regex,"\t").split("\\s+")
+      val mapping = names.zip(values).map{case(key, value)=> key -> value}.toMap
       val filename = mapping("Number")
-      val image = mapping("Scr")
       val domain = mapping("WebSite")
-      TagSample(image,filename, domain)
+      val negative = mapping("main_image").toInt == 0
+      TagSample(image,filename, domain, negative)
+
     }).toSeq
+
   }
 
 
 
-  def main(args: Array[String]) = {
-    parse(tag, "<img class=\"deneme\" alt=\"100\" ban=\"23\">") match {
+  def main(args: Array[String]):Unit = {
+    parse(tag, "<img border=\"0\" height=\"24\" src=\"/images/facebook.jpg\" width=\"24\" />") match {
+
       case Success(matched, _) => println(matched)
       case Failure(msg, _) => println(s"FAILURE: $msg")
       case Error(msg, _) => println(s"ERROR: $msg")
     }
+
+    readCSV("resources/img-csvs/adalet.txt")
   }
 }
