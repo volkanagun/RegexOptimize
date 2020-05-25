@@ -44,6 +44,7 @@ class TagSample(override val tagName: String, override val properties: Seq[(Stri
     this.isNegative = true
     this
   }
+
   def setNegative(value:Boolean): this.type = {
     this.isNegative = value
     this
@@ -60,35 +61,49 @@ class TagSample(override val tagName: String, override val properties: Seq[(Stri
   }
 
   def intersect(tagRegex: TagRegex): this.type = {
-    this.positiveRegex.intersect(tagRegex)
+    this.positiveRegex = this.positiveRegex.intersect(tagRegex)
+    this
+  }
+
+  def unisect(tagRegex: TagRegex): this.type = {
+    this.positiveRegex = this.positiveRegex.unisect(tagRegex)
     this
   }
 
   def intersect(tagRegexes: Seq[TagRegex]): this.type = {
-    this.positiveRegex.intersect(tagRegexes)
+    this.positiveRegex = this.positiveRegex.intersect(tagRegexes)
+    this
+  }
+
+  def unisect(tagRegexes: Seq[TagRegex]): this.type = {
+    this.positiveRegex = this.positiveRegex.unisect(tagRegexes)
     this
   }
 
   def intersectBySamples(tagSamples: Seq[TagSample]): this.type = {
-    this.positiveRegex.intersect(tagSamples.map(_.positiveRegex))
+    this.positiveRegex = this.positiveRegex.intersect(tagSamples.map(_.positiveRegex))
+    this
+  }
+
+  def unisectBySamples(tagSamples: Seq[TagSample]): this.type = {
+    this.positiveRegex = this.positiveRegex.unisect(tagSamples.map(_.positiveRegex))
     this
   }
 
   def difference(tagRegex: TagRegex): this.type = {
-    this.negativeRegex.difference(tagRegex)
+    this.negativeRegex = this.negativeRegex.difference(tagRegex)
     this
   }
 
   def difference(tagRegexes: Seq[TagRegex]): this.type = {
-    this.negativeRegex.difference(tagRegexes)
+    this.negativeRegex = this.negativeRegex.difference(tagRegexes)
     this
   }
 
   def differenceBySamples(tagSamples: Seq[TagSample]): this.type = {
-    this.negativeRegex.difference(tagSamples.map(_.positiveRegex))
+    this.negativeRegex = this.negativeRegex.difference(tagSamples.map(_.positiveRegex))
     this
   }
-
 
   def createRegex(): String = {
     "<" + tagName + "(.*?)>"
@@ -117,13 +132,25 @@ class TagSample(override val tagName: String, override val properties: Seq[(Stri
 }
 
 object TagSample {
+
+  def apply(tagName:String):TagSample={
+    TagMain(tagName, Seq()).toTagSample()
+  }
+
   def apply(imgStr: String, filename: String, domain: String): TagSample = {
-    TagMain(imgStr)
+    val tag = TagParser.apply(imgStr)
+    TagMain(tag)
       .toTagSample(filename, domain)
   }
 
   def apply(imgStr: String, filename: String, domain: String, negative:Boolean): TagSample = {
-    TagMain(imgStr)
+    val tag = TagParser.apply(imgStr)
+    TagMain(tag)
+      .toTagSample(filename, domain).setNegative(negative)
+  }
+
+  def apply(tag: Tag, filename: String, domain: String, negative:Boolean): TagSample = {
+    TagMain(tag)
       .toTagSample(filename, domain).setNegative(negative)
   }
 }

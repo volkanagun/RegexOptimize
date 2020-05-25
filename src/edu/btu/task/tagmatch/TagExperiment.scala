@@ -260,6 +260,7 @@ class TagExperiment {
   //build from train and test cases
   //construct
   def buildSamples(trainTest: TrainTest): this.type = {
+    println(s"Building samples for train-test")
     val crrTrainFileMap = trainTest.train.groupBy(_.filename)
     val crrTrainDomainMap = trainTest.train.groupBy(_.domain)
     val crrTrainDomainFileMap = crrTrainDomainMap.mapValues(samples => samples.map(_.filename)
@@ -270,6 +271,7 @@ class TagExperiment {
     val crrTestDomainFileMap = crrTestDomainMap.mapValues(samples => samples.map(_.filename)
       .distinct)
 
+    //find the bug
     trainTest.trainSamplesByFilename = crrTrainFileMap.keys.map(filename => filename -> createSamplesByFilename(filename, crrTrainFileMap)).toMap
     trainTest.trainSamplesByDomain = crrTrainDomainFileMap.keys.map(domain => domain -> createSamplesByDomain(domain, crrTrainDomainFileMap, crrTrainFileMap)).toMap
 
@@ -395,13 +397,13 @@ class TagExperiment {
   def createSamples(positiveTagGroup: Map[String, Seq[TagSample]], negativeTagGroup: Map[String, Seq[TagSample]], filename: String, domain: String): Seq[TagSample] = {
 
     val newSamples = positiveTagGroup.map { case (tagName, positives) => {
-      val newTagSample = TagSample(tagName, filename, domain)
+      val newTagSample = TagSample(tagName).setFilename(filename).setDomain(domain)
       if (negativeTagGroup.contains(tagName)) {
-        newTagSample.intersectBySamples(positives)
+        newTagSample.unisectBySamples(positives)
           .differenceBySamples(negativeTagGroup(tagName))
       }
       else {
-        newTagSample.intersectBySamples(positives)
+        newTagSample.unisectBySamples(positives)
       }
     }
     }
@@ -412,16 +414,17 @@ class TagExperiment {
   def createSamples(positiveTagGroup: Map[String, Seq[TagSample]], negativeTagGroup: Map[String, Seq[TagSample]], domain: String): Seq[TagSample] = {
 
     val newSamples = positiveTagGroup.map { case (tagName, positives) => {
-      val newTagSample = TagSample(tagName, domain, domain)
+      val newTagSample = TagSample(tagName)
+        .setFilename(domain)
+        .setDomain(domain)
       if (negativeTagGroup.contains(tagName)) {
-        newTagSample.intersectBySamples(positives)
+        newTagSample.unisectBySamples(positives)
           .differenceBySamples(negativeTagGroup(tagName))
       }
       else {
-        newTagSample.intersectBySamples(positives)
+        newTagSample.unisectBySamples(positives)
       }
-    }
-    }
+    }}
 
     newSamples.toSeq
   }
@@ -480,7 +483,8 @@ class TagExperiment {
   }
 
   def evaluate(trainingSet: Set[TagSample], testingSet: Set[TagSample]): this.type = {
-    val trainingMap = TagExperimentCodes.regexGenerator(trainingSet).mapValues(regexGenerators => regexGenerators.map(_.generateTimely()))
+    val regexGenMap = TagExperimentCodes.regexGenerator(trainingSet)
+    val trainingMap = regexGenMap.mapValues(regexGenerators => regexGenerators.map(_.generateTimely()))
 
     val eval = if (TagExperimentCodes.isSingle()) {
       val name = "evaluation-single-regex"
@@ -500,10 +504,14 @@ class TagExperiment {
 
   def evaluate(): EvaluationResult = {
     val trainTestSeq = crossvalidate(TagExperimentCodes.k, readCSVFolder(TagExperimentCodes.folder).allsamples)
-    trainTestSeq.zipWithIndex.foreach { case (trainTest, i) => {
+
+    trainTestSeq.par.foreach { trainTest  => {
       buildSamples(trainTest)
-      evaluate(trainTest)
     }}
+
+    trainTestSeq.foreach(trainTest => {
+      evaluate(trainTest)
+    })
 
     evaluationResult
 
@@ -512,6 +520,7 @@ class TagExperiment {
 
   def crossvalidate(k: Int, crrDomainSamples: Seq[TagSample]): Seq[TrainTest] = {
 
+    println("Splitting dataset for cross-validation")
     var crrSamples = allsamples
     val splitSize = allsamples.size / k
     var splitSeqs = Seq[Seq[TagSample]]()

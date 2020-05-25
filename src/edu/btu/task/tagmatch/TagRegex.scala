@@ -33,14 +33,21 @@ class TagRegex(val tagName: String, val multimap: Map[String, Set[String]]) exte
   var mapPositiveRegex = Map[String, Set[String]]()
   var mapNegativeRegex = Map[String, Set[String]]()
 
-  def intersect(tagRegexes:Seq[TagRegex]):this.type = {
-    tagRegexes.foreach{ right=> intersect(right)}
-    this
+
+
+  def unisect(tagRegexes:Seq[TagRegex]):TagRegex = {
+    val unisected = tagRegexes.foldRight[TagRegex](this){ case(right, main)=> main.unisect(right)}
+    unisected
   }
 
-  def difference(tagRegexes:Seq[TagRegex]):this.type ={
-    tagRegexes.foreach{right => difference(right)}
-    this
+  def intersect(tagRegexes:Seq[TagRegex]):TagRegex = {
+    val intersected = tagRegexes.foldRight[TagRegex](this){ case(right, main)=> main.intersect(right)}
+    intersected
+  }
+
+  def difference(tagRegexes:Seq[TagRegex]):TagRegex ={
+    val difference = tagRegexes.foldRight[TagRegex](this){ case(right, main)=> main.difference(right)}
+    difference
   }
 
   def intersect(tagRegex: TagRegex): TagRegex = {
@@ -56,12 +63,41 @@ class TagRegex(val tagName: String, val multimap: Map[String, Set[String]]) exte
 
   }
 
+  def unisect(tagRegex: TagRegex): TagRegex = {
+
+    val unionLabels = this.multimap.keySet.union(tagRegex.multimap.keySet)
+    val intersectedMap = unionLabels.map(label => {
+      if(multimap.contains(label) && tagRegex.multimap.contains(label)) {
+        var crrValues = multimap(label)
+        var newValues = tagRegex.multimap(label)
+        (label -> crrValues.union(newValues))
+      }
+      else if(multimap.contains(label)){
+        (label -> multimap(label))
+      }
+      else{
+        (label -> tagRegex.multimap(label))
+      }
+    }).toMap
+
+    TagRegex(tagName, intersectedMap)
+
+  }
+
   def difference(tagRegex: TagRegex):TagRegex = {
-    val intersectedLabels = this.multimap.keySet.intersect(tagRegex.multimap.keySet)
+    val intersectedLabels = this.multimap.keySet.union(tagRegex.multimap.keySet)
     val intersectedMap = intersectedLabels.map(label => {
-      var crrValues = multimap(label)
-      var newValues = tagRegex.multimap(label)
-      (label -> newValues.diff(crrValues))
+      if(multimap.contains(label) && tagRegex.multimap.contains(label)) {
+        var crrValues = multimap(label)
+        var newValues = tagRegex.multimap(label)
+        (label -> newValues.diff(crrValues))
+      }
+      else if(multimap.contains(label)){
+        (label -> Set[String]())
+      }
+      else{
+        (label -> tagRegex.multimap(label))
+      }
     }).toMap
 
     TagRegex(tagName, intersectedMap)

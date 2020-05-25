@@ -5,11 +5,16 @@ import scala.util.parsing.combinator.RegexParsers
 
 class TagMain(val tagName: String, val properties: Seq[(String, String)]) extends Serializable {
 
+
+
   def toTagRegex(): TagRegex = {
     val map = properties.map { case (label, value) => label -> Set(value) }.toMap
     new TagRegex(tagName, map)
   }
 
+  def toTagSample():TagSample={
+    new TagSample(tagName, properties)
+  }
 
   def toTagSample(filename:String, domain:String):TagSample={
     new TagSample(tagName, properties)
@@ -47,9 +52,12 @@ object TagMain {
     new TagMain(tagName, properties)
   }
 
-  def apply(imgStr: String): TagMain = {
+  /*def apply(imgStr: String): TagMain = {
     TagParser(imgStr).toTagMain()
 
+  }*/
+  def apply(tag: Tag): TagMain = {
+    tag.toTagMain()
   }
 }
 
@@ -69,11 +77,15 @@ case class Tag(name: String, attributes: Seq[Attribute]){
 class TagParser extends RegexParsers {
   override val whiteSpace = "\\s".r
 
-  def name: Parser[String] = "[a-z]+".r ^^ {
+  def name: Parser[String] = "\\p{L}+".r ^^ {
     _.toString
   }
+/*
+  def value: Parser[String] = "[\\p{L}á\\d\\p{Punct}\\/\\_]+".r ^^ {
+    _.toString
+  }*/
 
-  def value: Parser[String] = "[a-z\\d\"\\p{Punct}\\/]+".r ^^ {
+  def value: Parser[String] = "((\\'(.*?)\\')|(\\\"(.*?)\\\"))".r ^^ {
     _.toString
   }
 
@@ -92,8 +104,25 @@ object TagParser extends TagParser {
         println(s"$a")
         Tag("img", Seq())
       }
-      case Error(msg, _) => {
+      case Error(msg, a) => {
         println(s"ERROR: $line")
+        println(s"$a")
+        Tag("img", Seq())
+      }
+    }
+  }
+
+  def apply(line: String, lineIndex:Int, filename:String): Tag = {
+    parse(tag, line) match {
+      case Success(matched, _) => matched
+      case Failure(msg, a) => {
+        println(s"ERROR: $msg with $lineIndex and in filename: $filename")
+        println(s"$a")
+        Tag("img", Seq())
+      }
+      case Error(msg, a) => {
+        println(s"ERROR: $msg with $lineIndex and in filename: $filename")
+        println(s"$a")
         Tag("img", Seq())
       }
     }
@@ -110,10 +139,11 @@ object TagParser extends TagParser {
   //read CSV
   def readCSV(filename:String):Seq[TagSample] = {
 
-    val lines = Source.fromFile(filename, "UTF-8").getLines()
-    val names = lines.next().split("(\\s+|\\t+)").filter(! _.contains("theImg"))
+    println(s"Reading filename: ${filename}")
+    val lines = Source.fromFile(filename, "UTF-8").getLines().toArray.filter(! _.trim.isEmpty)
+    val names = lines.head.split("(\\s+|\\t+)").filter(! _.contains("theImg"))
     val regex = "(\\s+\"(.*?)>\"\\s)"
-    lines.map(line=> {
+    lines.tail.zipWithIndex.map{case(line, index) => {
       var image = regex.r.findAllIn(line).toArray.head.replaceFirst("\\/?>", " />")
         .replaceAll("\"\"","\"").trim
 
@@ -123,22 +153,23 @@ object TagParser extends TagParser {
       val filename = mapping("Number")
       val domain = mapping("WebSite")
       val negative = mapping("main_image").toInt == 0
-      TagSample(image,filename, domain, negative)
+      val tag = apply(image, index, filename)
+      TagSample(tag,filename, domain, negative)
 
-    }).toSeq
+    }}.toSeq
 
   }
 
 
 
   def main(args: Array[String]):Unit = {
-    parse(tag, "<img border=\"0\" height=\"24\" src=\"/images/facebook.jpg\" width=\"24\" />") match {
+    parse(tag, "<img alt=\"La luz laluz cmp\" src=\"/images/stories/2019/Diciembre/La-luz-laluz-cmp-01.jpg\" style=\"width:100%;\" title='Ediciones La Luz presenta la campaña de comunicación del 2020  \"A la Luz se lee mejor\".' />") match {
 
-      case Success(matched, _) => println(matched)
-      case Failure(msg, _) => println(s"FAILURE: $msg")
-      case Error(msg, _) => println(s"ERROR: $msg")
+      case Success(matched, a) => println(matched)
+      case Failure(msg, a) => println(s"FAILURE: $msg  ==> " + a.offset)
+      case Error(msg, a) => println(s"ERROR: $msg" + a.offset)
     }
 
-    readCSV("resources/img-csvs/adalet.txt")
+    readCSV("resources/img-csvs/ahora.txt")
   }
 }
