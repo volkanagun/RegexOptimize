@@ -1,6 +1,7 @@
 package edu.btu.search
 
 import edu.btu.operands.{Cell, Path, RegexNode, RegexNodeIndex, Regexify}
+import edu.btu.task.tagmatch.TimeBox
 
 import scala.util.control.Breaks
 
@@ -32,7 +33,6 @@ class SinglePositiveExact() extends AbstractRegexSearch() {
             val cellContent = matrix(i)(j)
 
             if (source(i).equalsByValue(target(j))) {
-
               val cell = Cell(i, j)
               cell.source = source(i)
               cell.target = target(j)
@@ -40,7 +40,6 @@ class SinglePositiveExact() extends AbstractRegexSearch() {
               cell.cost = 0
               cellContent.addCell(cell)
               prevMatching = 0
-
             }
             else if (j == (sizey - 1)) {
               //last column
@@ -53,7 +52,6 @@ class SinglePositiveExact() extends AbstractRegexSearch() {
               cellContent.addCell(cellOptional)
             }
             else if (i == (sizex - 1)) {
-
               //last row
               //use continuous optional for target
               val cellOptional = Cell(i, j)
@@ -97,11 +95,15 @@ class SinglePositiveExact() extends AbstractRegexSearch() {
   }
 
   override def searchDirectional(): Seq[Path] = {
-    searchDirectionalRegular(positives)
+
+    TimeBox.measureTime[Seq[Path]]("exact-single-positive", searchDirectionalRegular(positives))
+
   }
 
   override def searchNegative(): Seq[Path] = {
-    searchDirectionalRegular(negatives)
+
+    TimeBox.measureTime[Seq[Path]]("exact-single-positive", searchDirectionalRegular(negatives))
+
   }
 
 }

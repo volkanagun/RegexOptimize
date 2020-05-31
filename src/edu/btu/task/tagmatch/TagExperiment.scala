@@ -8,7 +8,7 @@ import edu.btu.task.tagmatch.TimeBox.{countMap, timeMap}
 
 import scala.io.Source
 
-case class TrainTest(train: Seq[TagSample], test: Seq[TagSample]) {
+case class TrainTest(var train: Seq[TagSample], var test: Seq[TagSample]) {
 
   var trainSamplesByFilename = Map[String, Seq[TagSample]]()
   var trainSamplesByDomain = Map[String, Seq[TagSample]]()
@@ -417,6 +417,7 @@ class TagExperiment {
       val newTagSample = TagSample(tagName)
         .setFilename(domain)
         .setDomain(domain)
+
       if (negativeTagGroup.contains(tagName)) {
         newTagSample.unisectBySamples(positives)
           .differenceBySamples(negativeTagGroup(tagName))
@@ -424,6 +425,8 @@ class TagExperiment {
       else {
         newTagSample.unisectBySamples(positives)
       }
+
+      newTagSample.filter()
     }}
 
     newSamples.toSeq
@@ -431,7 +434,7 @@ class TagExperiment {
 
   //accuracy evaluation
   def evaluateMatch(name: String, positives: Map[String, Set[String]], testingSet: Set[TagSample]): EvaluationResult = {
-    val foundMatches = testingSet.filter(tagSample => tagSample.matchWithPositive(positives))
+    val foundMatches = testingSet.par.filter(tagSample => tagSample.matchWithPositive(positives))
 
     //true positives
     val tp = foundMatches.filter(!_.isNegative)
@@ -470,7 +473,6 @@ class TagExperiment {
 
   def evaluateMatchTimely(name: String, positives: Map[String, Set[String]], testingSet: Set[TagSample]): EvaluationResult = {
     TimeBox.measureTime[EvaluationResult](name, evaluateMatch(name, positives, testingSet))
-
   }
 
   def evaluateMatchTimely(name: String, positives: Map[String, Set[String]], negatives: Map[String, Set[String]], testingSet: Set[TagSample]): EvaluationResult = {
@@ -483,8 +485,11 @@ class TagExperiment {
   }
 
   def evaluate(trainingSet: Set[TagSample], testingSet: Set[TagSample]): this.type = {
-    val regexGenMap = TagExperimentCodes.regexGenerator(trainingSet)
-    val trainingMap = regexGenMap.mapValues(regexGenerators => regexGenerators.map(_.generateTimely()))
+    val regexGenMap = TagExperimentCodes.regexGenerator(trainingSet).toArray
+    val trainingMap = regexGenMap.map {case(name, regexGenerators)=>{(name ->
+      regexGenerators.map(_.generate()))}}
+      .toMap
+
 
     val eval = if (TagExperimentCodes.isSingle()) {
       val name = "evaluation-single-regex"
@@ -503,7 +508,10 @@ class TagExperiment {
   }
 
   def evaluate(): EvaluationResult = {
-    val trainTestSeq = crossvalidate(TagExperimentCodes.k, readCSVFolder(TagExperimentCodes.folder).allsamples)
+    val allsamples = readCSVFolder(TagExperimentCodes.folder).allsamples
+    //now domain and positives
+
+    val trainTestSeq = crossvalidate(TagExperimentCodes.k, allsamples)
 
     trainTestSeq.par.foreach { trainTest  => {
       buildSamples(trainTest)
@@ -517,12 +525,42 @@ class TagExperiment {
 
   }
 
+  def crossvalidate(k:Int, allSamples:Seq[TagSample]):Seq[TrainTest]={
+    var main = Seq[TrainTest]()
 
-  def crossvalidate(k: Int, crrDomainSamples: Seq[TagSample]): Seq[TrainTest] = {
+    allsamples.groupBy(_.domain).foreach{case(domain, samples) => {
+
+      val positives = samples.filter(!_.isNegative)
+      val negatives = samples.filter(_.isNegative)
+      val distri = positives.length.toDouble / k
+
+      if(distri > 0){
+        main = crossUpdate(main, crossvalidateAll(k, positives))
+        main = crossUpdate(main, crossvalidateAll(k, negatives))
+      }
+
+
+    }}
+
+    main
+  }
+
+  def crossUpdate(main:Seq[TrainTest], crr:Seq[TrainTest]):Seq[TrainTest]={
+    if(main.length == crr.length){
+      main.zip(crr).foreach{case(m, c)=> m.train = m.train ++ c.train; m.test ++= c.test}
+      main
+    }
+    else{
+      crr
+    }
+  }
+
+  def crossvalidateAll(k: Int, crrDomainSamples: Seq[TagSample]): Seq[TrainTest] = {
 
     println("Splitting dataset for cross-validation")
-    var crrSamples = allsamples
-    val splitSize = allsamples.size / k
+    //consider positives and negatives
+    var crrSamples = crrDomainSamples
+    val splitSize = crrDomainSamples.size / k
     var splitSeqs = Seq[Seq[TagSample]]()
 
     for (i <- 0 until k - 1) {

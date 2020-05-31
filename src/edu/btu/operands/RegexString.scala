@@ -27,7 +27,8 @@ class RegexSingleString(val regexSearch:AbstractRegexSearch) extends RegexGenera
   }
 
   def generateTimely():Set[String]={
-    val set = TimeBox.measureTime[Set[String]]("Regex-Single",generate())
+    System.out.println("Generating regex...")
+    val set = TimeBox.measureTime[Set[String]]("Regex-Single", generate())
     filterTimely(set)
   }
 
@@ -36,7 +37,9 @@ class RegexSingleString(val regexSearch:AbstractRegexSearch) extends RegexGenera
   }
 
   def generate():Set[String] = {
+
     val paths = regexSearch.addPositive(positives)
+      .build()
       .searchDirectional()
       .sortBy(_.cost)
       .toArray
@@ -48,7 +51,9 @@ class RegexSingleString(val regexSearch:AbstractRegexSearch) extends RegexGenera
     val indices = for(x<-0 until regexNodes.length; y <-0 until regexNodes.length) yield (x, y)
     val elems = indices.filter{case(x, y)=> x!=y}
       .map{case(x, y)=> (regexNodes(x).toOrNodeIndex(regexNodes(y)))}
+
     val regexes = elems.map(nodeIndex=> nodeIndex.toRegex()).toSet
+
     regexes
   }
 
@@ -89,6 +94,7 @@ class RegexMultiString(val regexSearch:AbstractRegexSearch) extends RegexGenerat
   }
 
   def generateTimely():Set[String]={
+    System.out.println("Generating regex...")
     val set = TimeBox.measureTime[Set[String]]("Regex-Multi",generate())
     filterTimely(set)
   }
@@ -128,7 +134,15 @@ class RegexMultiString(val regexSearch:AbstractRegexSearch) extends RegexGenerat
 }
 
 object RegexString{
+
   def applyExact(positives:Set[String]):RegexGenerator={
+    new RegexSingleString(new SinglePositiveExact()).addPositives(positives)
+  }
+
+  def applyExactAdaptive(positives:Set[String]):RegexGenerator={
+    if(positives.head.length > 20){
+
+    }
     new RegexSingleString(new SinglePositiveExact()).addPositives(positives)
   }
 

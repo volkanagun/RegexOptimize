@@ -28,12 +28,16 @@ object Convertor{
 
 
 //use implicit conversion
-class TagRegex(val tagName: String, val multimap: Map[String, Set[String]]) extends Serializable {
+class TagRegex(val tagName: String, var multimap: Map[String, Set[String]]) extends Serializable {
 
   var mapPositiveRegex = Map[String, Set[String]]()
   var mapNegativeRegex = Map[String, Set[String]]()
 
 
+  def filter():TagRegex={
+    multimap = multimap.filter{case(key, values)=> !values.isEmpty}
+    this
+  }
 
   def unisect(tagRegexes:Seq[TagRegex]):TagRegex = {
     val unisected = tagRegexes.foldRight[TagRegex](this){ case(right, main)=> main.unisect(right)}

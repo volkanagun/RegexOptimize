@@ -60,6 +60,13 @@ class TagSample(override val tagName: String, override val properties: Seq[(Stri
     this
   }
 
+  def filter():this.type ={
+    this.positiveRegex.filter()
+    this.negativeRegex.filter()
+    this
+
+  }
+
   def intersect(tagRegex: TagRegex): this.type = {
     this.positiveRegex = this.positiveRegex.intersect(tagRegex)
     this

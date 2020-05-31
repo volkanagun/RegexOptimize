@@ -1,6 +1,7 @@
 package edu.btu.search
 
 import edu.btu.operands.{Cell, Path, RegexNode, RegexNodeIndex, Regexify}
+import edu.btu.task.tagmatch.TimeBox
 
 import scala.util.control.Breaks
 
@@ -35,7 +36,6 @@ class MultiPositiveExact() extends AbstractRegexSearch() {
             val cellContent = contents(i)(j)
 
             if (source(i).equalsByValue(target(j))) {
-
               val cell = Cell(i, j)
               cell.source = source(i)
               cell.target = target(j)
@@ -54,6 +54,7 @@ class MultiPositiveExact() extends AbstractRegexSearch() {
               cellOptional.matching = 3
               cellOptional.cost = 2
               cellContent.addCell(cellOptional)
+
             }
             else if (i == (sizex - 1)) {
               //last row
@@ -64,6 +65,7 @@ class MultiPositiveExact() extends AbstractRegexSearch() {
               cellOptional.matching = 4
               cellOptional.cost = 2
               cellContent.addCell(cellOptional)
+
             }
             else {
 
@@ -83,6 +85,7 @@ class MultiPositiveExact() extends AbstractRegexSearch() {
               cellOr.cost = 1
               cellContent.addCell(cellOr)
               prevMatching = 1
+
             }
           }
         }
@@ -97,10 +100,11 @@ class MultiPositiveExact() extends AbstractRegexSearch() {
 
 
   override def searchDirectional(): Seq[Path] = {
-    searchMultiDirectional(positives)
+    TimeBox.measureTime[Seq[Path]]("exact-multi-positive", searchMultiDirectional(positives))
   }
+
   override def searchNegative(): Seq[Path] = {
-    searchMultiDirectional(negatives)
+    TimeBox.measureTime[Seq[Path]]("exact-multi-negative", searchMultiDirectional(negatives))
   }
 
 

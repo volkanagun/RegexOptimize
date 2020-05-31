@@ -1,5 +1,6 @@
 package edu.btu.search
 import edu.btu.operands.{Cell, Path, RegexNode, RegexNodeIndex, Regexify}
+import edu.btu.task.tagmatch.TimeBox
 
 import scala.util.control.Breaks
 
@@ -28,7 +29,6 @@ class MultiPositiveApprox() extends AbstractRegexSearch() {
         breaking.breakable {
           for (j <- 0 until sizey) {
             val cellContent = contents(i)(j)
-
             if (source(i).equalsByGroup(target(j))) {
               val cell = Cell(i, j)
               cell.source = source(i)
@@ -88,10 +88,10 @@ class MultiPositiveApprox() extends AbstractRegexSearch() {
 
 
   override def searchDirectional(): Seq[Path] = {
-    searchMultiDirectional(positives)
+    TimeBox.measureTime[Seq[Path]]("approx-multi-positive", searchMultiDirectional(positives))
   }
   override def searchNegative(): Seq[Path] = {
-    searchMultiDirectional(negatives)
+    TimeBox.measureTime[Seq[Path]]("approx-multi-negative", searchMultiDirectional(negatives))
   }
 
   override def regexify(value: String): RegexNodeIndex = {

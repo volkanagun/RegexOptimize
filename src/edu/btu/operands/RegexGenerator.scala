@@ -6,7 +6,7 @@ abstract class RegexGenerator {
 
 
   def generateTimely():Set[String]
-
+  def generate():Set[String]
   def addPositives(positives:Set[String]):RegexGenerator
   def addNegatives(negatives:Set[String]):RegexGenerator
 

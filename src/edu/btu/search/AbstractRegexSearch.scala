@@ -45,7 +45,6 @@ abstract class AbstractRegexSearch() extends Serializable {
   def initMatrix(sizex: Int, sizey: Int): Array[Array[CellContent]] = {
 
     var matrix = Array[Array[CellContent]]()
-
     for (i <- 0 until sizex) {
 
       var row = Array[CellContent]()
@@ -72,12 +71,12 @@ abstract class AbstractRegexSearch() extends Serializable {
   }
 
   def addPositive(pair: (String, String)): this.type = {
-    val (source, target) = (regexify(pair._1), regexify(pair._2))
 
+    val (source, target) = (regexify(pair._1), regexify(pair._2))
     positives :+= source.elems
     positives :+= target.elems
-
     this
+
   }
 
   def addPositive(samples: Seq[String]): this.type = {
