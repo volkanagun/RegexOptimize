@@ -4,19 +4,15 @@ import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveEx
 
 abstract class RegexGenerator(val filterRatio:Double = 0.0) {
 
-
-
-
   def generateTimely():Set[String]
   def generate():Set[String]
-  def addPositives(positives:Set[String]):RegexGenerator
-  def addNegatives(negatives:Set[String]):RegexGenerator
-
 
   var positives:Set[String] = Set()
   var negatives:Set[String] = Set()
+
   var positiveFilter = new NGramFilter(filterRatio)
   var negativeFilter = new NGramFilter(filterRatio)
+
   def addPositives(positives:Set[String]):this.type = {
     this.positives = this.positives ++ positives
     this.positives = this.positiveFilter.filter(this.positives)
@@ -29,9 +25,12 @@ abstract class RegexGenerator(val filterRatio:Double = 0.0) {
     this
   }
 
-  def main(args: Array[String]): Unit = {
-    test9(3)
-  }
+
+  //region Description
+  //deneme
+  //deneme
+  //deneme
+  //endregion
 
   def method(i: Int): AbstractRegexSearch = {
     if (i == 0) new SinglePositiveExact()
@@ -41,20 +40,17 @@ abstract class RegexGenerator(val filterRatio:Double = 0.0) {
     else null
   }
 
-  def test0(methodIndex: Int): Unit = {
-    val sequence1 = "Phone: 34576890989";
-    val sequence2 = "Phone: 24585645464";
-    val sequence3 = "Phone: 54585645464";
 
-    test(Seq(sequence1, sequence2, sequence3), method(methodIndex), 0)
-  }
 
+
+  //<editor-fold desc="Description">
   def test1(methodIndex: Int): Unit = {
 
     val sequence1 = "345 PH+";
     val sequence2 = "!45 PH-";
     test(Seq(sequence1, sequence2), method(methodIndex), 0)
   }
+  //</editor-fold>
 
   def test2(methodIndex: Int): Unit = {
     val sequence1 = "5abc5:";
@@ -274,6 +270,8 @@ abstract class RegexGenerator(val filterRatio:Double = 0.0) {
 
   }
 
+  //
+  //endregion
 
 
 
