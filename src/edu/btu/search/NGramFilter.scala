@@ -2,7 +2,7 @@ package edu.btu.search
 
 import edu.btu.operands.RegexNodeIndex
 
-class NGramFilter {
+class NGramFilter(val ratio:Double) {
   //the regex must fill in the blanks
   //multiple regular expressions
   //generate most common expressions as n-gram dictionary
@@ -10,7 +10,8 @@ class NGramFilter {
   var freqDictionary = Map[String, Int]()
   var stepSize = 3;
   var sliceSize = 5;
-  var acceptRatio = 0.7
+  var acceptRatio = ratio
+
 
   /**
    * Generate n-grams
@@ -28,7 +29,7 @@ class NGramFilter {
     ratio > acceptRatio
   }
 
-  def filter(items:Seq[String]): Seq[String] = {
+  def filter(items:Set[String]): Set[String] = {
 
     items.foreach(item=> {
     val slices = ngrams(item)

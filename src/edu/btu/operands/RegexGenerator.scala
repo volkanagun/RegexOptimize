@@ -1,8 +1,10 @@
 package edu.btu.operands
 
-import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveExact, SinglePositiveApprox, SinglePositiveExact}
+import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveExact, NGramFilter, SinglePositiveApprox, SinglePositiveExact}
 
-abstract class RegexGenerator {
+abstract class RegexGenerator(val filterRatio:Double = 0.0) {
+
+
 
 
   def generateTimely():Set[String]
@@ -10,6 +12,22 @@ abstract class RegexGenerator {
   def addPositives(positives:Set[String]):RegexGenerator
   def addNegatives(negatives:Set[String]):RegexGenerator
 
+
+  var positives:Set[String] = Set()
+  var negatives:Set[String] = Set()
+  var positiveFilter = new NGramFilter(filterRatio)
+  var negativeFilter = new NGramFilter(filterRatio)
+  def addPositives(positives:Set[String]):this.type = {
+    this.positives = this.positives ++ positives
+    this.positives = this.positiveFilter.filter(this.positives)
+    this
+  }
+
+  def addNegatives(negatives:Set[String]):this.type = {
+    this.negatives = this.negatives ++ negatives
+    this.negatives = this.negativeFilter.filter(this.negatives)
+    this
+  }
 
   def main(args: Array[String]): Unit = {
     test9(3)

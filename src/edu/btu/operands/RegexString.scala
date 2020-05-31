@@ -1,25 +1,13 @@
 package edu.btu.operands
 
-import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveExact, SinglePositiveApprox, SinglePositiveExact}
+import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveExact, NGramFilter, SinglePositiveApprox, SinglePositiveExact}
 import edu.btu.task.tagmatch.TimeBox
 
 import scala.util.Random
 
-class RegexSingleString(val regexSearch:AbstractRegexSearch) extends RegexGenerator {
-  var positives:Set[String] = Set()
-  var negatives:Set[String] = Set()
+class RegexSingleString(val regexSearch:AbstractRegexSearch, val ratio:Double=0.0) extends RegexGenerator(ratio) {
 
-  override def addPositives(positives:Set[String]):this.type = {
-    this.positives = this.positives ++ positives
-    this
-  }
-
-  override def addNegatives(negatives:Set[String]):this.type = {
-    this.negatives = this.negatives ++ negatives
-    this
-  }
-
-  def filter(set:Set[String]):Set[String]={
+  def filter(set:Set[String]):Set[String] = {
     set.filter(regex=> {
       val matchAll = positives.forall(positive=> positive.matches(regex))
       matchAll
@@ -39,7 +27,6 @@ class RegexSingleString(val regexSearch:AbstractRegexSearch) extends RegexGenera
   def generate():Set[String] = {
 
     val paths = regexSearch.addPositive(positives)
-      .build()
       .searchDirectional()
       .sortBy(_.cost)
       .toArray
@@ -75,23 +62,9 @@ class RegexSingleString(val regexSearch:AbstractRegexSearch) extends RegexGenera
     regexes
   }*/
 
-
-
 }
 
-class RegexMultiString(val regexSearch:AbstractRegexSearch) extends RegexGenerator{
-  var positives:Set[String] = Set()
-  var negatives:Set[String] = Set()
-
-  override def addPositives(positives:Set[String]):this.type = {
-    this.positives = this.positives ++ positives
-    this
-  }
-
-  override def addNegatives(negatives:Set[String]):this.type = {
-    this.negatives = this.negatives ++ negatives
-    this
-  }
+class RegexMultiString(val regexSearch:AbstractRegexSearch, filterRatio:Double = 0.0) extends RegexGenerator(filterRatio) {
 
   def generateTimely():Set[String]={
     System.out.println("Generating regex...")
@@ -140,9 +113,7 @@ object RegexString{
   }
 
   def applyExactAdaptive(positives:Set[String]):RegexGenerator={
-    if(positives.head.length > 20){
-
-    }
+    if(positives.head.length > 20){}
     new RegexSingleString(new SinglePositiveExact()).addPositives(positives)
   }
 
