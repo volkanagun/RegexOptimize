@@ -25,7 +25,6 @@ abstract class RegexGenerator(val filterRatio:Double = 0.0) {
     this
   }
 
-
   //region Description
   //deneme
   //deneme
@@ -39,9 +38,6 @@ abstract class RegexGenerator(val filterRatio:Double = 0.0) {
     else if (i == 3) new MultiPositiveApprox()
     else null
   }
-
-
-
 
   //<editor-fold desc="Description">
   def test1(methodIndex: Int): Unit = {
