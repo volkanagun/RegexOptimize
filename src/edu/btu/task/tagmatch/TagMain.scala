@@ -74,7 +74,7 @@ case class Tag(name: String, attributes: Seq[Attribute]) {
 class TagParser extends RegexParsers {
   override val whiteSpace = "\\s".r
 
-  def name: Parser[String] = "\\p{L}+".r ^^ {
+  def name: Parser[String] = "[\\p{L}\\-\\_\\.]+".r ^^ {
     _.toString
   }
 
@@ -87,9 +87,10 @@ class TagParser extends RegexParsers {
     _.toString
   }
 
+  //<img alt="Mega Menu Spotlight: Ingredient Glossary" class="cld-responsive m-b-sm" data-src="https://cdn.no-toxic.com/q_auto:best,f_auto,fl_lossy,w_auto,c_limit,dpr_auto/v29/Mega-Menu/MM-ingredient-glossary-v2" data-width="162" src="https://cdn.no-toxic.com/q_auto:best,f_auto,fl_lossy,w_162,c_limit,dpr_1.25/v29/Mega-Menu/MM-ingredient-glossary-v2">
   def attribute: Parser[Attribute] = name ~ "=" ~ value ^^ { case wd ~ "=" ~ vl => Attribute(wd, vl) }
 
-  def tag: Parser[Tag] = "<img " ~> rep[Attribute](attribute) <~ "/>" ^^ { case attrs => Tag("img", attrs) }
+  def tag: Parser[Tag] = "<img " ~> rep[Attribute](attribute) <~ ">" ^^ { case attrs => Tag("img", attrs) }
 
 }
 
@@ -140,24 +141,27 @@ object TagParser extends TagParser {
 
     println(s"Reading filename: ${filename}")
     val lines = Source.fromFile(filename, "UTF-8").getLines().toArray.filter(!_.trim.isEmpty)
-    val names = lines.head.split("(\\s+|\\t+)").filter(!_.contains("theImg"))
-    val regex = "(\"\\<(.*?)\\>\")"
+    val names = lines.head.split("(\\s+|\\t+)").filter(nm => !(nm.contains("theImg") || nm.contains("Parent1") || nm.contains("Parent2")))
+    val regex = "((\"?)\\<(.*?)\\>(\"?))"
 
     lines.tail.zipWithIndex.map { case (line, index) => {
 
       val linem = line.replaceAll("(\\/)?>", ">")
-      var imageLines = regex.r.findAllIn(linem).toArray
+      val imageLines = regex.r.findAllIn(linem).toArray
 
-      var images = imageLines.map(imgLine => {
-        val nline = imgLine.replaceAll("\"\"", "\"").trim;
-        nline.substring(1, nline.length - 1)
+      val images = imageLines.map(imgLine => {
+        if(imgLine.startsWith("\"")) {
+          val nline = imgLine.replaceAll("\"\"", "\"").trim;
+          nline.substring(1, nline.length - 1)
+        }
+        else imgLine.trim
       })
 
       val image = images.head
       val parent1 = images(1)
       val parent2 = images(2)
 
-      val values = line.replaceAll(regex, "\t").split("\\s+")
+      val values = linem.replaceAll(regex, "\t").split("\\t+")
       var mapping = names.zip(values).map { case (key, value) => key -> value }.toMap
 
       mapping = mapping.updated("Parent1", parent1)
@@ -170,9 +174,7 @@ object TagParser extends TagParser {
       val tag = apply(image, index, filename)
 
       TagSample(tag, filename, domain, negative)
-
-    }
-    }.toSeq
+    }}.toSeq
 
   }
 
