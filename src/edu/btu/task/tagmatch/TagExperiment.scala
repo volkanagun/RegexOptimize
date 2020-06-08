@@ -21,11 +21,9 @@ case class TrainTest(var train: Seq[TagSample], var test: Seq[TagSample]) {
 
   var testingByFilename = Map[String, Seq[TagSample]]()
   var testingByDomain = Map[String, Seq[TagSample]]()
-
 }
 
 case class EvaluationResult() {
-
 
   var tpCount = Map[String, Int]()
   var fpCount = Map[String, Int]()
@@ -35,7 +33,6 @@ case class EvaluationResult() {
   var foldResults = Seq[EvaluationResult]()
 
   def summary(): this.type = {
-
     System.out.println(s"Total number of experiments: ${count}")
     System.out.println(s"Total number of folds: ${foldResults.length}")
     System.out.println(s"Total averages")
@@ -51,7 +48,6 @@ case class EvaluationResult() {
         foldResult.summary()
       }
     }
-
 
     this
   }
@@ -121,6 +117,7 @@ object TagExperimentCodes {
 
   var k = 3
   var folder = "resources/img-csvs/"
+  var datasets = "resources/datasets/"
 
   var experimentCycle = Array[String](singleExact, regexMulti)
 
@@ -129,13 +126,11 @@ object TagExperimentCodes {
     if (experimentCycle.contains(singleExact) && experimentCycle.contains(regexSingle)) {
       val positiveMap = training.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
         .groupBy(_._1).mapValues(_.map(_._2)).mapValues(positiveCases => Seq(RegexString.applyExact(positiveCases)))
-
       positiveMap
     }
     else if (experimentCycle.contains(singleApprox) && experimentCycle.contains(regexSingle)) {
       val positiveMap = training.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
         .groupBy(_._1).mapValues(_.map(_._2)).mapValues(positiveCases => Seq(RegexString.applyApproximate(positiveCases)))
-
       positiveMap
     }
     else if (experimentCycle.contains(singleExact) && experimentCycle.contains(regexMulti)) {
@@ -220,6 +215,7 @@ class TagExperiment {
   //do the train/test for each domain
   //do the accuracy for each domain
   def readFile(filename: String): this.type = {
+
     allsamples ++= TagParser.read(filename)
     domainSampleMap ++= allsamples.groupBy(_.domain)
     fileSampleMap ++= allsamples.groupBy(_.filename)
@@ -230,6 +226,7 @@ class TagExperiment {
     totalDomainCount = domainSampleMap.size
     totalFileCount = fileSampleMap.size
     this
+
   }
 
   //do the train/test for each domain
@@ -245,8 +242,8 @@ class TagExperiment {
     totalSampleCount = allsamples.size
     totalDomainCount = domainSampleMap.size
     totalFileCount = fileSampleMap.size
-    this
 
+    this
   }
 
   //do the train/test for each domain
@@ -260,6 +257,7 @@ class TagExperiment {
   //build from train and test cases
   //construct
   def buildSamples(trainTest: TrainTest): this.type = {
+
     println(s"Building samples for train-test")
     val crrTrainFileMap = trainTest.train.groupBy(_.filename)
     val crrTrainDomainMap = trainTest.train.groupBy(_.domain)
@@ -288,7 +286,9 @@ class TagExperiment {
   }
 
   def trainingSamplesByFilename(filename: String, crrFileSample: Map[String, Seq[TagSample]]): Seq[TagSample] = {
+
     if (new File(filename).exists()) {
+
       val htmlText = Source.fromFile(filename, "UTF-8").getLines().mkString("\n")
       val domain = crrFileSample(filename).map(_.domain).distinct.head
       val allRegexTags = crrFileSample(filename).map(_.createRegex()).distinct
@@ -299,17 +299,18 @@ class TagExperiment {
       positiveSamples ++ negativeSamples
     }
     else {
+
       val allSamples = crrFileSample(filename)
       val positiveSamples = allSamples.filter(tagSample => !tagSample.isNegative)
       val negativeSamples = allSamples.filter(tagSample => tagSample.isNegative)
       positiveSamples ++ negativeSamples
     }
 
-
   }
 
   def createSamplesByFilename(filename: String, crrFileSample: Map[String, Seq[TagSample]]): Seq[TagSample] = {
     if (new File(filename).exists()) {
+
       val htmlText = Source.fromFile(filename, "UTF-8").getLines().mkString("\n")
       val domain = crrFileSample(filename).head.domain
       val allRegexTags = crrFileSample(filename).map(_.createRegex()).distinct
@@ -320,8 +321,10 @@ class TagExperiment {
       val positiveTagGroup = positiveSamples.groupBy(_.tagName)
       val negativeTagGroup = negativeSamples.groupBy(_.tagName)
       createSamples(positiveTagGroup, negativeTagGroup, filename, domain)
+
     }
     else {
+
       val allSamples = crrFileSample(filename)
       val domain = allSamples.head.domain
       val positiveSamples = crrFileSample(filename).filter(tagSample => !tagSample.isNegative)
@@ -329,8 +332,8 @@ class TagExperiment {
       val positiveTagGroup = positiveSamples.groupBy(_.tagName)
       val negativeTagGroup = negativeSamples.groupBy(_.tagName)
       createSamples(positiveTagGroup, negativeTagGroup, filename, domain)
-    }
 
+    }
 
   }
 
@@ -341,7 +344,9 @@ class TagExperiment {
     var negativeAllSamples = Seq[TagSample]()
 
     crrDomainFileMap(domain).foreach(filename => {
+
       if (new File(filename).exists()) {
+
         val htmlText = Source.fromFile(filename, "UTF-8").getLines().mkString("\n")
         val allRegexTags = crrFileMap(filename).map(_.createRegex()).distinct
         val allSamples = allRegexTags.flatMap(crrRegexTag => crrRegexTag.r.findAllIn(htmlText).map(matched => TagSample(matched, filename, domain)))
@@ -349,14 +354,18 @@ class TagExperiment {
         val negativeSamples = allSamples.filter(tagSample => !positiveSamples.contains(tagSample)).map(_.setNegative())
         positiveAllSamples ++= positiveSamples
         negativeAllSamples ++= negativeSamples
+
       }
       else {
+
         val allSamples = crrFileMap(filename)
         val positiveSamples = allSamples.filter(tagSample => !tagSample.isNegative)
         val negativeSamples = allSamples.filter(tagSample => tagSample.isNegative)
         positiveAllSamples ++= positiveSamples
         negativeAllSamples ++= negativeSamples
+
       }
+
     })
 
     positiveAllSamples ++ negativeAllSamples
@@ -370,6 +379,7 @@ class TagExperiment {
 
     crrDomainFileMap(domain).foreach(filename => {
       if (new File(filename).exists()) {
+
         val htmlText = Source.fromFile(filename, "UTF-8").getLines().mkString("\n")
         val allRegexTags = crrFileMap(filename).map(_.createRegex()).distinct
         val allSamples = allRegexTags.flatMap(crrRegexTag => crrRegexTag.r.findAllIn(htmlText).map(matched => TagSample(matched, filename, domain)))
@@ -377,13 +387,16 @@ class TagExperiment {
         val negativeSamples = allSamples.filter(tagSample => !positiveSamples.contains(tagSample)).map(_.setNegative())
         positiveAllSamples ++= positiveSamples
         negativeAllSamples ++= negativeSamples
+
       }
       else {
+
         val allSamples = crrFileMap(filename)
         val positiveSamples = allSamples.filter(tagSample => !tagSample.isNegative)
         val negativeSamples = allSamples.filter(tagSample => tagSample.isNegative)
         positiveAllSamples ++= positiveSamples
         negativeAllSamples ++= negativeSamples
+
       }
     })
 
@@ -423,10 +436,13 @@ class TagExperiment {
           .differenceBySamples(negativeTagGroup(tagName))
       }
       else {
+
         newTagSample.unisectBySamples(positives)
+
       }
 
       newTagSample.filter()
+
     }}
 
     newSamples.toSeq
@@ -490,7 +506,6 @@ class TagExperiment {
       regexGenerators.map(_.generate()))}}
       .toMap
 
-
     val eval = if (TagExperimentCodes.isSingle()) {
       val name = "evaluation-single-regex"
       val positiveMap = trainingMap.mapValues(_.head)
@@ -507,8 +522,8 @@ class TagExperiment {
     this
   }
 
-  def evaluate(): EvaluationResult = {
-    val allsamples = readCSVFolder(TagExperimentCodes.folder).allsamples
+  def evaluate(folder:String): EvaluationResult = {
+    val allsamples = readCSVFolder(folder).allsamples
     //now domain and positives
 
     val trainTestSeq = crossvalidate(TagExperimentCodes.k, allsamples)
@@ -525,7 +540,7 @@ class TagExperiment {
 
   }
 
-  def crossvalidate(k:Int, allSamples:Seq[TagSample]):Seq[TrainTest]={
+  def crossvalidate(k:Int, allSamples:Seq[TagSample]):Seq[TrainTest] = {
     var main = Seq[TrainTest]()
 
     allsamples.groupBy(_.domain).foreach{case(domain, samples) => {
@@ -538,7 +553,6 @@ class TagExperiment {
         main = crossUpdate(main, crossvalidateAll(k, positives))
         main = crossUpdate(main, crossvalidateAll(k, negatives))
       }
-
 
     }}
 

@@ -25,14 +25,11 @@ object Convertor{
 }
 
 
-
-
 //use implicit conversion
 class TagRegex(val tagName: String, var multimap: Map[String, Set[String]]) extends Serializable {
 
   var mapPositiveRegex = Map[String, Set[String]]()
   var mapNegativeRegex = Map[String, Set[String]]()
-
 
   def filter():TagRegex={
     multimap = multimap.filter{case(key, values)=> !values.isEmpty}
@@ -64,7 +61,6 @@ class TagRegex(val tagName: String, var multimap: Map[String, Set[String]]) exte
     }).toMap
 
     TagRegex(tagName, intersectedMap)
-
   }
 
   def unisect(tagRegex: TagRegex): TagRegex = {
@@ -89,6 +85,7 @@ class TagRegex(val tagName: String, var multimap: Map[String, Set[String]]) exte
   }
 
   def difference(tagRegex: TagRegex):TagRegex = {
+
     val intersectedLabels = this.multimap.keySet.union(tagRegex.multimap.keySet)
     val intersectedMap = intersectedLabels.map(label => {
       if(multimap.contains(label) && tagRegex.multimap.contains(label)) {

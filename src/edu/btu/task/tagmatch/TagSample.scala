@@ -15,19 +15,18 @@ class TagSample(override val tagName: String, override val properties: Seq[(Stri
         regexSet.exists(regex=> psMap(item).matches(regex))
       }
       else defaultValue
-    }
-    }
+    }}
   }
 
   //should not match any of negative
   def matchWithNegative(regexPositive: Map[String, Set[String]], regexNegative: Map[String, Set[String]], defaultValue:Boolean = true): Boolean = {
+
     val yesMatch = regexPositive.forall { case (item, regexSet) => {
       if (psMap.contains(item)) {
         regexSet.exists(regex=> psMap(item).matches(regex))
       }
       else defaultValue
-    }
-    }
+    }}
 
     val noMatch = regexNegative.exists { case (item, regexSet) => {
       if (psMap.contains(item)) {
@@ -116,9 +115,6 @@ class TagSample(override val tagName: String, override val properties: Seq[(Stri
     "<" + tagName + "(.*?)>"
   }
 
-  //create multiple regexes
-
-  //create single regexes
 
   def canEqual(other: Any): Boolean = other.isInstanceOf[TagSample]
 
@@ -140,7 +136,7 @@ class TagSample(override val tagName: String, override val properties: Seq[(Stri
 
 object TagSample {
 
-  def apply(tagName:String):TagSample={
+  def apply(tagName:String):TagSample = {
     TagMain(tagName, Seq()).toTagSample()
   }
 
@@ -160,4 +156,5 @@ object TagSample {
     TagMain(tag)
       .toTagSample(filename, domain).setNegative(negative)
   }
+
 }

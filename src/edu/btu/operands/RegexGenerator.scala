@@ -19,6 +19,7 @@ abstract class RegexGenerator(val filterRatio:Double = 0.0) {
     this
   }
 
+
   def addNegatives(negatives:Set[String]):this.type = {
     this.negatives = this.negatives ++ negatives
     this.negatives = this.negativeFilter.filter(this.negatives)
