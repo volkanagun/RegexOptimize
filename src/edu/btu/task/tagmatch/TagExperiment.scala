@@ -116,6 +116,7 @@ object TagExperimentCodes {
   val samplesFromFilename = "FILENAME-SAMPLES"
 
   var k = 3
+  var patternFilterRatio = 0.8
   var folder = "resources/img-csvs/"
   var datasets = "resources/datasets/"
 
@@ -194,6 +195,7 @@ class TagExperiment {
   //cross-validation
   //training vs test vs all
   var trainTestRatio = Array(0.6, 0.4)
+
 
   var totalSampleCount = 0
   var totalDomainCount = 0
@@ -282,6 +284,8 @@ class TagExperiment {
     trainTest.testingByFilename = crrTestFileMap.keys.map(filename => filename -> trainingSamplesByFilename(filename, crrTestFileMap)).toMap
     trainTest.testingByDomain = crrTestDomainMap.keys.map(domain => domain -> trainingSamplesByDomain(domain, crrTestDomainFileMap, crrTestFileMap)).toMap
 
+    println("Building finished...")
+
     this
   }
 
@@ -304,6 +308,7 @@ class TagExperiment {
       val positiveSamples = allSamples.filter(tagSample => !tagSample.isNegative)
       val negativeSamples = allSamples.filter(tagSample => tagSample.isNegative)
       positiveSamples ++ negativeSamples
+
     }
 
   }
@@ -363,7 +368,6 @@ class TagExperiment {
         val negativeSamples = allSamples.filter(tagSample => tagSample.isNegative)
         positiveAllSamples ++= positiveSamples
         negativeAllSamples ++= negativeSamples
-
       }
 
     })
@@ -496,11 +500,14 @@ class TagExperiment {
   }
 
   def evaluate(trainTest: TrainTest): this.type = {
+    println(s"Evaluating training dataset")
+
     evaluate(trainTest.train.toSet, trainTest.test.toSet)
     this
   }
 
   def evaluate(trainingSet: Set[TagSample], testingSet: Set[TagSample]): this.type = {
+
     val regexGenMap = TagExperimentCodes.regexGenerator(trainingSet).toArray
     val trainingMap = regexGenMap.map {case(name, regexGenerators)=>{(name ->
       regexGenerators.map(_.generate()))}}
@@ -528,7 +535,7 @@ class TagExperiment {
 
     val trainTestSeq = crossvalidate(TagExperimentCodes.k, allsamples)
 
-    trainTestSeq.par.foreach { trainTest  => {
+    trainTestSeq.foreach { trainTest  => {
       buildSamples(trainTest)
     }}
 
@@ -571,7 +578,7 @@ class TagExperiment {
 
   def crossvalidateAll(k: Int, crrDomainSamples: Seq[TagSample]): Seq[TrainTest] = {
 
-    println("Splitting dataset for cross-validation")
+    println(s"Splitting dataset for cross-validation of ${k}")
     //consider positives and negatives
     var crrSamples = crrDomainSamples
     val splitSize = crrDomainSamples.size / k
@@ -588,10 +595,12 @@ class TagExperiment {
     var trainTestSeq = Seq[TrainTest]()
 
     for (i <- 0 until splitSeqs.size) {
+
       val newRange = rangeFull - i
       val testSeq = splitSeqs(i)
       val trainSeq = newRange.flatMap(splitSeqs(_)).toSeq
       trainTestSeq :+= TrainTest(trainSeq, testSeq)
+
     }
 
     trainTestSeq

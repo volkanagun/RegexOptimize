@@ -74,7 +74,7 @@ case class Tag(name: String, attributes: Seq[Attribute]) {
 class TagParser extends RegexParsers {
   override val whiteSpace = "\\s".r
 
-  def name: Parser[String] = "[\\p{L}\\-\\_\\.]+".r ^^ {
+  def name: Parser[String] = "[\\p{L}\\-\\_\\.\\d]+".r ^^ {
     _.toString
   }
 
@@ -88,7 +88,8 @@ class TagParser extends RegexParsers {
   }
 
   //<img alt="Mega Menu Spotlight: Ingredient Glossary" class="cld-responsive m-b-sm" data-src="https://cdn.no-toxic.com/q_auto:best,f_auto,fl_lossy,w_auto,c_limit,dpr_auto/v29/Mega-Menu/MM-ingredient-glossary-v2" data-width="162" src="https://cdn.no-toxic.com/q_auto:best,f_auto,fl_lossy,w_162,c_limit,dpr_1.25/v29/Mega-Menu/MM-ingredient-glossary-v2">
-  def attribute: Parser[Attribute] = name ~ "=" ~ value ^^ { case wd ~ "=" ~ vl => Attribute(wd, vl) }
+  def attribute: Parser[Attribute] =
+    name ~ "=" ~ value ^^ { case wd ~ "=" ~ vl => Attribute(wd, vl) } | name ~ ":=" ~ value ^^ {case wd ~ ":=" ~ vl => Attribute(wd, vl) }
 
   def tag: Parser[Tag] = "<img " ~> rep[Attribute](attribute) <~ ">" ^^ { case attrs => Tag("img", attrs) }
 
@@ -118,11 +119,13 @@ object TagParser extends TagParser {
       case Failure(msg, a) => {
         println(s"ERROR: $msg with $lineIndex and in filename: $filename")
         println(s"$a")
+        println(s"Line: $line")
         Tag("img", Seq())
       }
       case Error(msg, a) => {
         println(s"ERROR: $msg with $lineIndex and in filename: $filename")
         println(s"$a")
+        println(s"Line: $line")
         Tag("img", Seq())
       }
     }
@@ -144,7 +147,7 @@ object TagParser extends TagParser {
     val names = lines.head.split("(\\s+|\\t+)").filter(nm => !(nm.contains("theImg") || nm.contains("Parent1") || nm.contains("Parent2")))
     val regex = "((\"?)\\<(.*?)\\>(\"?))"
 
-    lines.tail.zipWithIndex.map { case (line, index) => {
+    lines.tail.zipWithIndex.flatMap { case (line, index) => {
 
       val linem = line.replaceAll("(\\/)?>", ">")
       val imageLines = regex.r.findAllIn(linem).toArray
@@ -170,10 +173,18 @@ object TagParser extends TagParser {
 
       val filename = mapping("Number")
       val domain = mapping("WebSite")
-      val negative = mapping("main_image").toInt == 0
-      val tag = apply(image, index, filename)
 
-      TagSample(tag, filename, domain, negative)
+      if(!mapping.contains("main_image")){
+
+        None
+      }
+      else {
+
+        val negative = mapping("main_image").toDouble == 0.0
+        val tag = apply(image, index, filename)
+        Some(TagSample(tag, filename, domain, negative))
+
+      }
     }}.toSeq
 
   }

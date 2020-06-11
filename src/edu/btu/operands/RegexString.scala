@@ -1,7 +1,7 @@
 package edu.btu.operands
 
 import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveExact, NGramFilter, SinglePositiveApprox, SinglePositiveExact}
-import edu.btu.task.tagmatch.TimeBox
+import edu.btu.task.tagmatch.{TagExperimentCodes, TimeBox}
 
 import scala.util.Random
 
@@ -108,25 +108,26 @@ class RegexMultiString(val regexSearch:AbstractRegexSearch, filterRatio:Double =
 
 object RegexString{
 
+
   def applyExact(positives:Set[String]):RegexGenerator={
-    new RegexSingleString(new SinglePositiveExact()).addPositives(positives)
+    new RegexSingleString(new SinglePositiveExact(), TagExperimentCodes.patternFilterRatio).addPositives(positives)
   }
 
   def applyExactAdaptive(positives:Set[String]):RegexGenerator={
     if(positives.head.length > 20){}
-    new RegexSingleString(new SinglePositiveExact()).addPositives(positives)
+    new RegexSingleString(new SinglePositiveExact(), TagExperimentCodes.patternFilterRatio).addPositives(positives)
   }
 
   def applyApproximate(positives:Set[String]):RegexGenerator={
-    new RegexSingleString( new SinglePositiveApprox()).addPositives(positives)
+    new RegexSingleString( new SinglePositiveApprox(), TagExperimentCodes.patternFilterRatio).addPositives(positives)
   }
 
   def applyExact(positives:Set[String], negatives:Set[String]):RegexGenerator={
-    new RegexMultiString(new MultiPositiveExact()).addPositives(positives).addNegatives(negatives)
+    new RegexMultiString(new MultiPositiveExact(), TagExperimentCodes.patternFilterRatio).addPositives(positives).addNegatives(negatives)
   }
 
   def applyApproximate(positives:Set[String], negatives:Set[String]):RegexGenerator={
-    new RegexMultiString(new MultiPositiveApprox()).addPositives(positives).addNegatives(negatives)
+    new RegexMultiString(new MultiPositiveApprox(), TagExperimentCodes.patternFilterRatio).addPositives(positives).addNegatives(negatives)
   }
 
 }
