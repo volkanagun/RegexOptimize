@@ -2,27 +2,40 @@ package edu.btu.operands
 
 import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveExact, NGramFilter, SinglePositiveApprox, SinglePositiveExact}
 
-abstract class RegexGenerator(val filterRatio:Double = 0.0) {
+abstract class RegexGenerator(val filterRatio: Double = 0.0, val topCount: Int = 20) {
 
-  def generateTimely():Set[String]
-  def generate():Set[String]
+  def generateTimely(): Set[String]
 
-  var positives:Set[String] = Set()
-  var negatives:Set[String] = Set()
+  def generate(): Set[String]
 
-  var positiveFilter = new NGramFilter(filterRatio)
-  var negativeFilter = new NGramFilter(filterRatio)
+  var positives: Set[String] = Set()
+  var negatives: Set[String] = Set()
 
-  def addPositives(positives:Set[String]):this.type = {
+  var positiveFilter = new NGramFilter(filterRatio).setTopCount(topCount)
+  var negativeFilter = new NGramFilter(filterRatio).setTopCount(topCount)
+
+  def addPositives(positives: Set[String]): this.type = {
     this.positives = this.positives ++ positives
-    this.positives = this.positiveFilter.filter(this.positives)
+    this.positives = this.positiveFilter.count(this.positives).filter(this.positives)
     this
   }
 
-  def addNegatives(negatives:Set[String]):this.type = {
+  def addNegatives(negatives: Set[String]): this.type = {
     this.negatives = this.negatives ++ negatives
-    this.negatives = this.negativeFilter.filter(this.negatives)
+    this.negatives = this.negativeFilter.count(this.negatives).filter(this.negatives)
     this
+  }
+
+  def filterSlice(): this.type = {
+    this.negatives = this.negativeFilter.filterSlice(negatives)
+    this.positives = this.positiveFilter.filterSlice(positives)
+    this
+  }
+
+  def isEmpty() = positives.isEmpty
+
+  def longest(regexes: Set[String]): String = {
+    regexes.toSeq.map(str => (str, str.length)).sortBy(_._2).reverse.head._1
   }
 
   //region Description
@@ -37,78 +50,6 @@ abstract class RegexGenerator(val filterRatio:Double = 0.0) {
     else if (i == 2) new MultiPositiveExact()
     else if (i == 3) new MultiPositiveApprox()
     else null
-  }
-
-  //<editor-fold desc="Description">
-  def test1(methodIndex: Int): Unit = {
-
-    val sequence1 = "345 PH+";
-    val sequence2 = "!45 PH-";
-    test(Seq(sequence1, sequence2), method(methodIndex), 0)
-  }
-  //</editor-fold>
-
-  def test2(methodIndex: Int): Unit = {
-    val sequence1 = "5abc5:";
-    val sequence2 = "pb5:4";
-    test(Seq(sequence1, sequence2), method(methodIndex), 0)
-  }
-
-  def test3(methodIndex: Int): Unit = {
-    val sequence1 = "abcd5";
-    val sequence2 = "axyzp10";
-    test(Seq(sequence1, sequence2), method(methodIndex), 0)
-  }
-
-  def test4(methodIndex: Int): Unit = {
-    val sequence1 = "0A?p7p8";
-    val sequence2 = "0123A4p?";
-    test(Seq(sequence1, sequence2), method(methodIndex), 0)
-  }
-
-  def test5(methodIndex: Int): Unit = {
-    val sequence1 = "abcd";
-    val sequence2 = "axd";
-    val sequence3 = "y";
-
-    test(Seq(sequence1, sequence2, sequence3), method(methodIndex), 0)
-  }
-
-  def test6(methodIndex: Int): Unit = {
-    val sequence1 = "xzabcx";
-    val sequence2 = "xyefgx";
-    val sequence3 = "xabcdx";
-
-    test(Seq(sequence1, sequence2, sequence3), method(methodIndex), 0)
-  }
-
-  def test7(methodIndex: Int): Unit = {
-    val sequence1 = "xyzabc";
-    val sequence2 = "abc";
-    /* val sequence3 = "prbabc";
-     val sequence4 = "tlmabc";e*/
-
-    test(Seq(sequence1, sequence2 /*, sequence3, sequence4*/), method(methodIndex), 0)
-  }
-
-  def test8(methodIndex: Int): Unit = {
-    val sequence1 = "xyzabc";
-    val sequence2 = "abc";
-    /* val sequence3 = "prbabc";
-     val sequence4 = "tlmabc";e*/
-
-    test(Seq(sequence1, sequence2 /*, sequence3, sequence4*/), method(methodIndex), 3)
-  }
-
-  def test9(methodIndex: Int): Unit = {
-    val positive0 = "567trt";
-    val positive1 = "xyzabc";
-    val positive2 = "abc";
-    val negative1 = "xyz";
-    val negative2 = "xyz";
-    /* val sequence3 = "prbabc";
-     val sequence4 = "tlmabc";e*/
-    test(Seq(positive0, positive1, positive2), Seq(negative1, negative2), method(methodIndex), 3)
   }
 
   def test(sequences: Seq[String], regexSearch: AbstractRegexSearch, testIndex: Int): Unit = {
@@ -138,137 +79,6 @@ abstract class RegexGenerator(val filterRatio:Double = 0.0) {
     val ndst = dst(j).toString
     Cell(i, j, node(nsrc, i), node(ndst, j))
   }
-
-
-  def test1(): String = {
-    val path = Path()
-
-    path.addCell(cell(0, 0, "x", "x"), 0.0)
-      .addCell(cell(0, 1, "x", "y"), 0)
-      .addCell(cell(1, 1, "y", "y"), 0)
-      .addCell(cell(2, 1, "z", "y"), 0)
-      .addCell(cell(2, 2, "z", "z"), 0)
-      .addCell(cell(3, 2, "a", "z"), 0)
-
-    val param = path.toOrRegex()
-    param.constructRegex()
-  }
-
-  def test2(): String = {
-    val path = Path()
-
-    path.addCell(cell(0, 0, "x", "x"), 0.0)
-      .addCell(cell(1, 1, "y", "y"), 0)
-      .addCell(cell(2, 2, "z", "z"), 0)
-      .addCell(cell(3, 3, "a", "a"), 0)
-      .addCell(cell(4, 4, "a", "b"), 0)
-      .addCell(cell(4, 5, "a", "c"), 0)
-      .addCell(cell(5, 5, "a", "c"), 0)
-
-    val param = path.toOrRegex()
-    val regexStr = param.constructRegex()
-    println(regexStr)
-    regexStr
-
-  }
-
-  def test3(): String = {
-    val path = Path()
-
-    path.addCell(cell(0, 0, "x", "x"), 0.0)
-      .addCell(cell(1, 1, "y", "y"), 0)
-      .addCell(cell(2, 2, "z", "z"), 0)
-      .addCell(cell(2, 3, "z", "a"), 0)
-      .addCell(cell(2, 4, "z", "b"), 0)
-      .addCell(cell(2, 5, "z", "c"), 0)
-
-    val param = path.toOrRegex()
-    val regexStr = param.constructRegex()
-    println(regexStr)
-    regexStr
-
-  }
-
-  def test4(): String = {
-    val path = Path()
-
-    path.addCell(cell(0, 0, "a", "x"), 0.0)
-      .addCell(cell(0, 1, "a", "y"), 0)
-      .addCell(cell(0, 2, "a", "z"), 0)
-      .addCell(cell(0, 3, "a", "a"), 0)
-      .addCell(cell(1, 4, "b", "b"), 0)
-      .addCell(cell(2, 5, "c", "c"), 0)
-
-    val param = path.toOrRegex()
-    val regexStr = param.constructRegex()
-    println(regexStr)
-    regexStr
-
-  }
-
-  def test5(): String = {
-    val path = Path()
-
-    path.addCell(cell(0, 0, "a", "x"), 0.0)
-      .addCell(cell(1, 0, "b", "x"), 0)
-      .addCell(cell(2, 0, "c", "x"), 0)
-      .addCell(cell(3, 0, "x", "x"), 0)
-      .addCell(cell(4, 1, "y", "y"), 0)
-      .addCell(cell(5, 2, "z", "z"), 0)
-      .addCell(cell(6, 2, "a", "z"), 0)
-      .addCell(cell(7, 2, "b", "z"), 0)
-      .addCell(cell(8, 2, "c", "z"), 0)
-
-    val param = path.toOrRegex()
-    val regexStr = param.updateRegex()
-    println(regexStr)
-    regexStr
-
-  }
-
-  def test6(): String = {
-    val path = Path()
-
-    path.addCell(cell(0, 0, "a", "x"), 0.0)
-      .addCell(cell(1, 0, "b", "x"), 0)
-      .addCell(cell(2, 0, "c", "x"), 0)
-      .addCell(cell(3, 0, "x", "x"), 0)
-      .addCell(cell(4, 1, "y", "y"), 0)
-      .addCell(cell(5, 2, "z", "z"), 0)
-      .addCell(cell(6, 3, "a", "a"), 0)
-      .addCell(cell(7, 4, "b", "b"), 0)
-      .addCell(cell(8, 5, "c", "c"), 0)
-
-    val param = path.toOrRegex()
-    val regexStr = param.updateRegex()
-    println(regexStr)
-    regexStr
-
-  }
-
-  def test7(): String = {
-    val path = Path()
-
-    path.addCell(cell(0, 0, "a", "x"), 0.0)
-      .addCell(cell(1, 0, "b", "x"), 0)
-      .addCell(cell(2, 0, "c", "x"), 0)
-      .addCell(cell(3, 0, "x", "x"), 0)
-      .addCell(cell(4, 1, "y", "y"), 0)
-      .addCell(cell(5, 2, "z", "z"), 0)
-      .addCell(cell(6, 0, "a", "x"), 0)
-      .addCell(cell(7, 1, "b", "y"), 0)
-      .addCell(cell(8, 2, "c", "z"), 0)
-
-    val param = path.toOrRegex()
-    val regexStr = param.updateRegex()
-    println(regexStr)
-    regexStr
-
-  }
-
-  //
-  //endregion
-
 
 
   def testRegular(sequences: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
@@ -307,14 +117,18 @@ abstract class RegexGenerator(val filterRatio:Double = 0.0) {
       .sortBy(_.cost)
       .toArray
 
+    //correct
     val regexNodes = paths.map(crrPath => {
-      crrPath.toOrRegex().constructRegexNode()
+      val orNode = crrPath.toOrRegex()
+      val newNode = orNode.constructRegexNode()
+      newNode
     }).distinct
 
-    val indices = for(x<-0 until regexNodes.length; y <-0 until regexNodes.length) yield (x, y)
-    val elems = indices.filter{case(x, y)=> x!=y}
-      .map{case(x, y)=> (regexNodes(x).toOrNodeIndex(regexNodes(y)))}
-    val regexes = elems.map(nodeIndex=> nodeIndex.toRegex())
+    //fix here and toOrNodeIndex
+    val indices = for (x <- 0 until regexNodes.length; y <- x+1 until regexNodes.length) yield (x, y)
+    //multiple regexes with minimum length
+    val elems =  indices.map { case (x, y) => (regexNodes(x).combineOrNode(regexNodes(y))) }
+    val regexes = elems.map(nodeIndex => nodeIndex.toRegex())
 
     matchTest(regexes, sequences)
 
@@ -353,8 +167,6 @@ abstract class RegexGenerator(val filterRatio:Double = 0.0) {
   def matchTest(regexes: Seq[String], sequences: Seq[String], positiveMatch: Boolean = true): Unit = {
 
     println("Regular expression count: " + regexes.length)
-
-
     regexes.foreach(regex => {
       println(s"Should match all : ${positiveMatch}")
       sequences.foreach(sequence => {

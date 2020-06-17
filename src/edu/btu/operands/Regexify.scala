@@ -48,6 +48,13 @@ object Regexify {
     else source.matchGroup + "|" + target.matchGroup
   }
 
+  def toOrNode(indice:Int) : RegexNodeIndex={
+    RegexNodeIndex(0, RegexOp(Regexify.or))
+  }
+  def toSeqNode(indice:Int) : RegexNodeIndex={
+    RegexNodeIndex(indice, RegexOp(Regexify.seq))
+  }
+
 
   def toOrExactRegex(source: RegexNodeIndex, target: RegexNodeIndex): String = {
     if (source.equalsByValue(target)) source.matchValue

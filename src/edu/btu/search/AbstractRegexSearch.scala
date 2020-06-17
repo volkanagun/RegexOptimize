@@ -322,46 +322,51 @@ abstract class AbstractRegexSearch() extends Serializable {
 
       val lastCell = path.getLastCell()
 
-      /* if (cell.directional(lastCell)) {
-         val nextPath = path.addCell(cell, 0)
-         if (cell.isLast(sourceLength, targetLength)) {
-           paths = paths :+ nextPath.copy()
-         }
-       }*/
-
       if (lastCell.isDown()) {
+
         val (canDown, di, dj) = goDown(cell, sourceLength)
         val (canCross, ci, cj) = goCross(cell, sourceLength, targetLength)
         if (canDown) paths ++= searchDirectional(path.copy(), source, target, di, dj)
         if (canCross) paths ++= searchDirectional(path.copy(), source, target, ci, cj)
+
       }
 
       if (lastCell.isRight()) {
+
         val (canRight, di, dj) = goRight(cell, targetLength)
         val (canCross, ci, cj) = goCross(cell, sourceLength, targetLength)
         if (canRight) paths ++= searchDirectional(path.copy(), source, target, di, dj)
         if (canCross) paths ++= searchDirectional(path.copy(), source, target, ci, cj)
+
       }
 
       if (lastCell.isCross()) {
+
         val (canRight, ri, rj) = goRight(cell, target.length)
         val (canDown, di, dj) = goDown(cell, source.length)
         val (canCross, ci, cj) = goCross(cell, source.length, target.length)
+
         if (canRight) paths ++= searchDirectional(path.copy(), source, target, ri, rj)
         if (canDown) paths ++= searchDirectional(path.copy(), source, target, di, dj)
         if (canCross) paths ++= searchDirectional(path.copy(), source, target, ci, cj)
+
       }
 
     }
     else {
+
       val (canRight, ri, rj) = goRight(cell, target.length)
       val (canDown, di, dj) = goDown(cell, source.length)
       val (canCross, ci, cj) = goCross(cell, source.length, target.length)
+
       if (canRight) paths ++= searchDirectional(path.copy(), source, target, ri, rj)
       if (canDown) paths ++= searchDirectional(path.copy(), source, target, di, dj)
       if (canCross) paths ++= searchDirectional(path.copy(), source, target, ci, cj)
+
     }
 
+    //take the top 3 least costs
+    //for efficiency
     paths
 
   }
@@ -410,7 +415,7 @@ abstract class AbstractRegexSearch() extends Serializable {
   def createNode(leftPath:Path, rightPath:Path):RegexNodeIndex = {
     val leftNode = leftPath.toOrRegex().constructRegexNode()
     val rightNode = rightPath.toOrRegex().constructRegexNode()
-    leftNode.toOrNodeIndex(rightNode)
+    leftNode.combineOrNode(rightNode)
   }
 
 
@@ -449,7 +454,7 @@ abstract class AbstractRegexSearch() extends Serializable {
 
     val indices = for(x<-0 until regexNodes.length; y <-0 until regexNodes.length) yield (x, y)
     val elems = indices.filter{case(x, y)=> x!=y}
-      .map{case(x, y)=> (regexNodes(x).toOrNodeIndex(regexNodes(y)))}
+      .map{case(x, y)=> (regexNodes(x).combineOrNode(regexNodes(y)))}
     val regexes = elems.map(nodeIndex=> nodeIndex.toRegex())
 
     regexes

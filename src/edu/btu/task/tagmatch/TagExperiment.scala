@@ -105,54 +105,106 @@ object TagExperimentCodes {
   val singleApprox = "SINGLE-APPROX"
   val multiExact = "MULTI-EXACT"
   val multiApprox = "MULTI-APPROX"
+  val multiApproxNGRAM = "MULTI-NGRAM-APPROX"
+  val multiExactNGRAM = "MULTI-NGRAM-EXACT"
 
   //search with multiple regexes
   val regexMulti = "REGEX-MULTI"
   //search with single regex construct longer regex
   val regexSingle = "REGEX-SINGLE"
 
+  val doNGramFilter = true
+
   //use filenames or domains
   val samplesFromDomain = "DOMAIN-SAMPLES"
   val samplesFromFilename = "FILENAME-SAMPLES"
 
   var k = 3
-  var patternFilterRatio = 0.8
+  var maxNodes = 20
+  var maxSamples = 10
+  var patternFilterRatio = 0.5
+  var commonSampleCount = 10
+  var ngramLength = 7
+  var ngramStepLength = 5
+
   var folder = "resources/img-csvs/"
   var datasets = "resources/datasets/"
 
   var experimentCycle = Array[String](singleExact, regexMulti)
 
+  //Filter generators
+  def filterGenerator(regexGenMap: Array[(String, Seq[RegexGenerator])]): Array[(String, Seq[RegexGenerator])] = {
+
+    println("Filter generators...")
+    regexGenMap.foreach { case (_, generators) => {
+      if (TagExperimentCodes.doNGramFilter) generators.map(generator => generator.filterSlice())
+    }}
+
+    regexGenMap.map { case (name, generators) => {
+      val nonEmptyGens = generators.filter(regexGenerator => !regexGenerator.positives.isEmpty)
+      (name, nonEmptyGens)
+    }}.filter(!_._2.isEmpty)
+
+  }
+
+  def combineGenerator(mapping: Array[(String, Seq[RegexGenerator])]): Array[(String, Seq[RegexGenerator])] = {
+
+    println("Combining generators...")
+
+    mapping.map { case (name, seq) => {
+      if (!seq.isEmpty) {
+        val head = seq.head
+        val tail = seq.tail.foreach(reg => {
+          head.positives ++= reg.positives
+          head.negatives ++= reg.negatives
+        })
+        (name, Seq(head))
+      }
+      else{
+        (name, Seq())
+      }
+    }
+    }
+
+  }
+
   def regexGenerator(training: Set[TagSample]): Map[String, Seq[RegexGenerator]] = {
 
     if (experimentCycle.contains(singleExact) && experimentCycle.contains(regexSingle)) {
+
       val positiveMap = training.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
         .groupBy(_._1).mapValues(_.map(_._2)).mapValues(positiveCases => Seq(RegexString.applyExact(positiveCases)))
       positiveMap
+
     }
     else if (experimentCycle.contains(singleApprox) && experimentCycle.contains(regexSingle)) {
+
       val positiveMap = training.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
         .groupBy(_._1).mapValues(_.map(_._2)).mapValues(positiveCases => Seq(RegexString.applyApproximate(positiveCases)))
       positiveMap
+
     }
     else if (experimentCycle.contains(singleExact) && experimentCycle.contains(regexMulti)) {
 
       val positiveMap = training.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
         .groupBy(_._1).mapValues(_.map(_._2)).mapValues(positiveCases => Seq(RegexString.applyExact(positiveCases)))
 
-      val negativeMap = training.flatMap(tg => tg.negativeRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
-        .groupBy(_._1).mapValues(_.map(_._2)).mapValues(positiveCases => Seq(RegexString.applyExact(positiveCases)))
+      /*val negativeMap = training.flatMap(tg => tg.negativeRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
+        .groupBy(_._1).mapValues(_.map(_._2)).mapValues(negativeCases => Seq(RegexString.applyExact(negativeCases)))*/
 
-      positiveMap.map { case (tag, pos) => tag -> (pos ++ negativeMap.getOrElse(tag, Seq())) }
+      positiveMap
+
     }
     else if (experimentCycle.contains(singleApprox) && experimentCycle.contains(regexMulti)) {
 
       val positiveMap = training.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
         .groupBy(_._1).mapValues(_.map(_._2)).mapValues(positiveCases => Seq(RegexString.applyApproximate(positiveCases)))
 
-      val negativeMap = training.flatMap(tg => tg.negativeRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
-        .groupBy(_._1).mapValues(_.map(_._2)).mapValues(positiveCases => Seq(RegexString.applyApproximate(positiveCases)))
+      /*val negativeMap = training.flatMap(tg => tg.negativeRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
+        .groupBy(_._1).mapValues(_.map(_._2)).mapValues(positiveCases => Seq(RegexString.applyApproximate(positiveCases)))*/
 
-      positiveMap.map { case (tag, pos) => tag -> (pos ++ negativeMap.getOrElse(tag, Seq())) }
+      positiveMap
+
     }
     else if (experimentCycle.contains(multiExact) && experimentCycle.contains(regexSingle)) {
 
@@ -174,6 +226,39 @@ object TagExperimentCodes {
 
       positiveMap.map { case (tag, positiveCases) => (tag, positiveCases, negativeMap.getOrElse(tag, Set())) }
         .map { case (tag, pos, neg) => tag -> Seq(RegexString.applyApproximate(pos, neg)) }.toMap
+
+    }
+    else if (experimentCycle.contains(multiApprox) && experimentCycle.contains(regexSingle)) {
+
+      val positiveMap = training.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
+        .groupBy(_._1).mapValues(_.map(_._2))
+      val negativeMap = training.flatMap(tg => tg.negativeRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
+        .groupBy(_._1).mapValues(_.map(_._2))
+
+      positiveMap.map { case (tag, positiveCases) => (tag, positiveCases, negativeMap.getOrElse(tag, Set())) }
+        .map { case (tag, pos, neg) => tag -> Seq(RegexString.applyApproximate(pos, neg)) }.toMap
+
+    }
+    else if (experimentCycle.contains(multiApproxNGRAM) && experimentCycle.contains(regexSingle)) {
+
+      val positiveMap = training.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
+        .groupBy(_._1).mapValues(_.map(_._2))
+      val negativeMap = training.flatMap(tg => tg.negativeRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
+        .groupBy(_._1).mapValues(_.map(_._2))
+
+      positiveMap.map { case (tag, positiveCases) => (tag, positiveCases, negativeMap.getOrElse(tag, Set())) }
+        .map { case (tag, pos, neg) => tag -> Seq(RegexString.applyApproximateNGram(pos, neg)) }.toMap
+
+    }
+    else if (experimentCycle.contains(multiExactNGRAM) && experimentCycle.contains(regexSingle)) {
+
+      val positiveMap = training.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
+        .groupBy(_._1).mapValues(_.map(_._2))
+      val negativeMap = training.flatMap(tg => tg.negativeRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
+        .groupBy(_._1).mapValues(_.map(_._2))
+
+      positiveMap.map { case (tag, positiveCases) => (tag, positiveCases, negativeMap.getOrElse(tag, Set())) }
+        .map { case (tag, pos, neg) => tag -> Seq(RegexString.applyExactNGram(pos, neg)) }.toMap
 
     }
     else Map()
@@ -251,7 +336,7 @@ class TagExperiment {
   //do the train/test for each domain
   //do the accuracy for each domain
   def readCSVFolder(folder: String): this.type = {
-    new File(folder).list().foreach(filename => readCSV(folder+filename))
+    new File(folder).list().foreach(filename => readCSV(folder + filename))
     this
   }
 
@@ -285,7 +370,6 @@ class TagExperiment {
     trainTest.testingByDomain = crrTestDomainMap.keys.map(domain => domain -> trainingSamplesByDomain(domain, crrTestDomainFileMap, crrTestFileMap)).toMap
 
     println("Building finished...")
-
     this
   }
 
@@ -447,7 +531,8 @@ class TagExperiment {
 
       newTagSample.filter()
 
-    }}
+    }
+    }
 
     newSamples.toSeq
   }
@@ -506,12 +591,17 @@ class TagExperiment {
     this
   }
 
+
   def evaluate(trainingSet: Set[TagSample], testingSet: Set[TagSample]): this.type = {
 
-    val regexGenMap = TagExperimentCodes.regexGenerator(trainingSet).toArray
-    val trainingMap = regexGenMap.map {case(name, regexGenerators)=>{(name ->
-      regexGenerators.map(_.generate()))}}
-      .toMap
+    var regexGenMap = TagExperimentCodes.regexGenerator(trainingSet).toArray
+    regexGenMap = TagExperimentCodes.combineGenerator(regexGenMap)
+    regexGenMap = TagExperimentCodes.filterGenerator(regexGenMap)
+
+    val trainingMap = regexGenMap.map { case (name, regexGenerators) => {
+      (name ->
+        regexGenerators.map(_.generateTimely()).filter(!_.isEmpty))
+    }}.toMap.filter{case(name, set)=> !set.isEmpty}
 
     val eval = if (TagExperimentCodes.isSingle()) {
       val name = "evaluation-single-regex"
@@ -529,15 +619,16 @@ class TagExperiment {
     this
   }
 
-  def evaluate(folder:String): EvaluationResult = {
-    val allsamples = readCSVFolder(folder).allsamples
+  def evaluate(folder: String): EvaluationResult = {
+    val allsamples = readCSVFolder(folder).allsamples.take(500)
     //now domain and positives
 
-    val trainTestSeq = crossvalidate(TagExperimentCodes.k, allsamples)
+    val trainTestSeq = crossvalidate(TagExperimentCodes.k, allsamples, TagExperimentCodes.maxSamples)
 
-    trainTestSeq.foreach { trainTest  => {
+    trainTestSeq.foreach { trainTest => {
       buildSamples(trainTest)
-    }}
+    }
+    }
 
     trainTestSeq.foreach(trainTest => {
       evaluate(trainTest)
@@ -547,31 +638,31 @@ class TagExperiment {
 
   }
 
-  def crossvalidate(k:Int, allSamples:Seq[TagSample]):Seq[TrainTest] = {
+  def crossvalidate(k: Int, allSamples: Seq[TagSample], maxSize: Int = 5): Seq[TrainTest] = {
     var main = Seq[TrainTest]()
 
-    allsamples.groupBy(_.domain).foreach{case(domain, samples) => {
+    allsamples.groupBy(_.domain).foreach { case (domain, samples) => {
+      val positives = samples.filter(!_.isNegative).take(maxSize)
+      val negatives = samples.filter(_.isNegative).take(maxSize)
+      val posDist = positives.length.toDouble / k
+      val negDist = negatives.length.toDouble / k
 
-      val positives = samples.filter(!_.isNegative)
-      val negatives = samples.filter(_.isNegative)
-      val distri = positives.length.toDouble / k
-
-      if(distri > 0){
+      if (posDist > 0) {
         main = crossUpdate(main, crossvalidateAll(k, positives))
         main = crossUpdate(main, crossvalidateAll(k, negatives))
       }
-
-    }}
+    }
+    }
 
     main
   }
 
-  def crossUpdate(main:Seq[TrainTest], crr:Seq[TrainTest]):Seq[TrainTest]={
-    if(main.length == crr.length){
-      main.zip(crr).foreach{case(m, c)=> m.train = m.train ++ c.train; m.test ++= c.test}
+  def crossUpdate(main: Seq[TrainTest], crr: Seq[TrainTest]): Seq[TrainTest] = {
+    if (main.length == crr.length) {
+      main.zip(crr).foreach { case (m, c) => m.train = m.train ++ c.train; m.test ++= c.test }
       main
     }
-    else{
+    else {
       crr
     }
   }

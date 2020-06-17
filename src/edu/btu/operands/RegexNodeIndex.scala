@@ -23,6 +23,21 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
     "("+matchValue+")"
   }
 
+  def getMaxIndice():Int = {
+    if(!elems.isEmpty) {
+      elems.maxBy(_.indice)
+        .indice
+    }
+    else{
+      indice
+    }
+  }
+
+  def updateMaxIndice():this.type ={
+    indice = getMaxIndice()
+    this
+  }
+
   def setRegexOp(regexOp: RegexOp):this.type ={
     this.regexOp = regexOp
     this
@@ -43,7 +58,7 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
       newNode.simplify()
     }
     else if(isSeq() || isEmpty()){
-      elems = elems.flatMap(elem => if(elem.isEmpty()) Seq(elem) else elem.elems)
+      elems = elems.flatMap(elem => if(elem.isEmpty()) Seq(elem) else Seq(elem.simplify()))
       this
     }
     else {
@@ -88,7 +103,20 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
     Regexify.optional.equals(regexOp.name) || Regexify.orbracketOptional.equals(regexOp.name)
   }
 
-  def toOrNodeIndex(node: RegexNodeIndex): RegexNodeIndex = {
+  def readyNode():RegexNodeIndex={
+    if(isSeq()) this
+    else {
+      Regexify.toSeqNode(indice).add(this)
+    }
+  }
+
+
+  def combineNode(regexNodeIndex: RegexNodeIndex):RegexNodeIndex={
+    readyNode().add(regexNodeIndex)
+  }
+
+  //buggy here
+  def combineOrNode(node: RegexNodeIndex): RegexNodeIndex = {
     if (node.isOr() && (isSeq() || isOptional())) {
       node.elems :+= this
       node
@@ -98,8 +126,8 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
       this
     }
     else if ((node.isSeq() && isSeq()) || (node.isOptional() && isOptional())) {
-      val nelems = elems :+ node
-      RegexNodeIndex(0, RegexOp(Regexify.seq), nelems)
+      val nelems = Seq(this,  node)
+      RegexNodeIndex(0, RegexOp(Regexify.or), nelems)
     }
     else if (node.isOr() && isOr()) {
       node.elems ++= elems

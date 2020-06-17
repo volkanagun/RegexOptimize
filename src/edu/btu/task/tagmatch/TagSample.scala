@@ -9,34 +9,49 @@ class TagSample(override val tagName: String, override val properties: Seq[(Stri
   var isNegative: Boolean = false
   var psMap = properties.map { case (k, v) => k -> v }.toMap
 
-  def matchWithPositive(regexMap: Map[String, Set[String]], defaultValue:Boolean = true): Boolean = {
-    regexMap.forall { case (item, regexSet) => {
+  def matchWithPositive(regexMap: Map[String, Set[String]], defaultValue: Boolean = true): Boolean = {
+    var count = 0
+    var size = 0
+
+    regexMap.foreach { case (item, regexSet) => {
+
       if (psMap.contains(item)) {
-        regexSet.exists(regex=> psMap(item).matches(regex))
+        count += regexSet.count(regex => psMap(item).matches(regex))
       }
-      else defaultValue
+
+      size += 1
     }}
+
+    (count.toDouble / size) > 0
+
   }
 
   //should not match any of negative
-  def matchWithNegative(regexPositive: Map[String, Set[String]], regexNegative: Map[String, Set[String]], defaultValue:Boolean = true): Boolean = {
+  def matchWithNegative(regexPositive: Map[String, Set[String]], regexNegative: Map[String, Set[String]], defaultValue: Boolean = true): Boolean = {
 
-    val yesMatch = regexPositive.forall { case (item, regexSet) => {
+    var count = 0
+    var nocount = 0
+    var size = 0
+    var nosize = 0
+
+    val yesMatch = regexPositive.foreach { case (item, regexSet) => {
       if (psMap.contains(item)) {
-        regexSet.exists(regex=> psMap(item).matches(regex))
+        count += regexSet.count(regex => psMap(item).matches(regex))
       }
-      else defaultValue
+      size += 1
     }}
 
-    val noMatch = regexNegative.exists { case (item, regexSet) => {
+    val noMatch = regexNegative.foreach { case (item, regexSet) => {
       if (psMap.contains(item)) {
-        regexSet.exists(regex=> psMap(item).matches(regex))
+        nocount += regexSet.count(regex => psMap(item).matches(regex))
       }
-      else defaultValue
+      nosize += 1
     }}
 
-    yesMatch && !noMatch
+    val yesmatch = count.toDouble/size > 0.0
+    val nomatch = nocount.toDouble/nosize > 0.0
 
+    yesmatch && !nomatch
   }
 
   def setNegative(): this.type = {
@@ -44,7 +59,7 @@ class TagSample(override val tagName: String, override val properties: Seq[(Stri
     this
   }
 
-  def setNegative(value:Boolean): this.type = {
+  def setNegative(value: Boolean): this.type = {
     this.isNegative = value
     this
   }
@@ -59,7 +74,7 @@ class TagSample(override val tagName: String, override val properties: Seq[(Stri
     this
   }
 
-  def filter():this.type ={
+  def filter(): this.type = {
     this.positiveRegex.filter()
     this.negativeRegex.filter()
     this
@@ -136,7 +151,7 @@ class TagSample(override val tagName: String, override val properties: Seq[(Stri
 
 object TagSample {
 
-  def apply(tagName:String):TagSample = {
+  def apply(tagName: String): TagSample = {
     TagMain(tagName, Seq()).toTagSample()
   }
 
@@ -146,13 +161,13 @@ object TagSample {
       .toTagSample(filename, domain)
   }
 
-  def apply(imgStr: String, filename: String, domain: String, negative:Boolean): TagSample = {
+  def apply(imgStr: String, filename: String, domain: String, negative: Boolean): TagSample = {
     val tag = TagParser.apply(imgStr)
     TagMain(tag)
       .toTagSample(filename, domain).setNegative(negative)
   }
 
-  def apply(tag: Tag, filename: String, domain: String, negative:Boolean): TagSample = {
+  def apply(tag: Tag, filename: String, domain: String, negative: Boolean): TagSample = {
     TagMain(tag)
       .toTagSample(filename, domain).setNegative(negative)
   }

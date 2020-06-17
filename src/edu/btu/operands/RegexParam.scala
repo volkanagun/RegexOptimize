@@ -91,7 +91,7 @@ class RegexParam extends Serializable {
 
   def constructRegexNode(): RegexNodeIndex = {
 
-    val mainNode = RegexNodeIndex(0, RegexOp("seq"), regexStack.reverse)
+    var mainNode = RegexNodeIndex(0, RegexOp("seq"), regexStack.reverse)
     regexStack = Stack()
 
     var regexSrcOpt = Seq[RegexNodeIndex]()
@@ -99,6 +99,7 @@ class RegexParam extends Serializable {
 
     var srcOpt: RegexNodeIndex = null;
     var trtOpt: RegexNodeIndex = null;
+
 
     while (!sourceOptional.isEmpty || !targetOptional.isEmpty) {
 
@@ -129,20 +130,34 @@ class RegexParam extends Serializable {
     }
 
     if (regexSrcOpt.isEmpty && !regexTrtOpt.isEmpty) {
-      mainNode.elems = RegexNodeIndex(0, RegexOp(Regexify.optional), regexTrtOpt) +: mainNode.elems
+      //indice comparison
+      mainNode  = combineByOrder(mainNode, RegexNodeIndex(0, RegexOp(Regexify.optional), regexTrtOpt))
     }
     else if (regexTrtOpt.isEmpty && !regexSrcOpt.isEmpty) {
-      mainNode.elems = RegexNodeIndex(0, RegexOp(Regexify.optional), regexSrcOpt) +: mainNode.elems
-    }
+      //indice comparison
+      mainNode = combineByOrder(mainNode, RegexNodeIndex(0, RegexOp(Regexify.optional), regexSrcOpt))
 
+    }
     else {
-      val srcNode = RegexNodeIndex(0, RegexOp(Regexify.seq), regexSrcOpt)
-      val dstNode = RegexNodeIndex(0, RegexOp(Regexify.seq), regexTrtOpt)
-      mainNode.elems = RegexNodeIndex(0, RegexOp(Regexify.or), Seq(srcNode, dstNode)) +: mainNode.elems
+      val srcNode = RegexNodeIndex(0, RegexOp(Regexify.seq), regexSrcOpt).updateMaxIndice()
+      val dstNode = RegexNodeIndex(0, RegexOp(Regexify.seq), regexTrtOpt).updateMaxIndice()
+      val orNode = RegexNodeIndex(0, RegexOp(Regexify.or), Seq(srcNode, dstNode)).updateMaxIndice()
+      mainNode = combineByOrder(mainNode.updateMaxIndice(), orNode)
     }
 
     mainNode.simplify()
 
+  }
+
+
+  def combineByOrder(mainNode:RegexNodeIndex, newNode:RegexNodeIndex) : RegexNodeIndex = {
+
+    if(mainNode.indice > newNode.indice) {
+      newNode.combineNode(mainNode)
+    }
+    else{
+      mainNode.combineNode(newNode)
+    }
   }
 
 
