@@ -298,6 +298,7 @@ object Regexify {
           else if (opname.equals(or)) toRegex(elems, opname, opcount, "|")
           else if (opname.equals(orBracket)) toRegex(elems, opname)
           else if (opname.equals(bracketCount)) toRegex(elems, opname, opcount)
+          else if (opname.equals(optional)) toRegex(elems, opname, opcount)
           else throw new Exception(s"Operation group not found for group: ${opname} and value: ${opname}")
 
         }

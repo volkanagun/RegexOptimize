@@ -121,7 +121,7 @@ object TagExperimentCodes {
 
   var k = 3
   var maxNodes = 20
-  var maxSamples = 10
+  var maxSamples = 100
   var patternFilterRatio = 0.5
   var commonSampleCount = 10
   var ngramLength = 7
@@ -620,7 +620,7 @@ class TagExperiment {
   }
 
   def evaluate(folder: String): EvaluationResult = {
-    val allsamples = readCSVFolder(folder).allsamples.take(500)
+    val allsamples = readCSVFolder(folder).allsamples.take(50)
     //now domain and positives
 
     val trainTestSeq = crossvalidate(TagExperimentCodes.k, allsamples, TagExperimentCodes.maxSamples)

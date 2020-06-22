@@ -21,15 +21,4 @@ object PatternReader {
   }
 
 
-  def main(args: Array[String]): Unit = {
-
-    var i = 0;
-
-    for( i <- 0 until 10) {
-
-    }
-
-    System.out.println(i)
-  }
-
 }
