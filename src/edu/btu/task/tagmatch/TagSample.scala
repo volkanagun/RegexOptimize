@@ -1,5 +1,7 @@
 package edu.btu.task.tagmatch
 
+import edu.btu.search.NGramFilter
+
 class TagSample(override val tagName: String, override val properties: Seq[(String, String)]) extends TagMain(tagName, properties) {
 
   var filename: String = null
@@ -7,22 +9,22 @@ class TagSample(override val tagName: String, override val properties: Seq[(Stri
   var positiveRegex: TagRegex = toTagRegex()
   var negativeRegex: TagRegex = toTagRegex()
   var isNegative: Boolean = false
-  var psMap = properties.map { case (k, v) => k -> v }.toMap
+  val ngramFilter = NGramFilter()
+
+
+  var psMap = properties.map { case (k, v) => k -> ngramFilter.remove(v) }.toMap
 
   def matchWithPositive(regexMap: Map[String, Set[String]], defaultValue: Boolean = true): Boolean = {
     var count = 0
     var size = 0
 
     regexMap.foreach { case (item, regexSet) => {
-
-      if (psMap.contains(item)) {
-        count += regexSet.count(regex => psMap(item).matches(regex))
-      }
-
+      val propertyValue = psMap.getOrElse(item, "")
+      count += regexSet.map(regex => regex.r.findAllIn(propertyValue).size).sum
       size += 1
     }}
 
-    (count.toDouble / size) > 0
+    (count.toDouble / size) > 0.0
 
   }
 
@@ -34,17 +36,15 @@ class TagSample(override val tagName: String, override val properties: Seq[(Stri
     var size = 0
     var nosize = 0
 
-    val yesMatch = regexPositive.foreach { case (item, regexSet) => {
-      if (psMap.contains(item)) {
-        count += regexSet.count(regex => psMap(item).matches(regex))
-      }
+    regexPositive.foreach { case (item, regexSet) => {
+      val propertyValue = psMap.getOrElse(item, "")
+      count += regexSet.map(regex => regex.r.findAllIn(propertyValue).size).sum
       size += 1
     }}
 
-    val noMatch = regexNegative.foreach { case (item, regexSet) => {
-      if (psMap.contains(item)) {
-        nocount += regexSet.count(regex => psMap(item).matches(regex))
-      }
+    regexNegative.foreach { case (item, regexSet) => {
+      val propertyValue = psMap.getOrElse(item, "")
+      nocount += regexSet.map(regex => regex.r.findAllIn(propertyValue).size).sum
       nosize += 1
     }}
 

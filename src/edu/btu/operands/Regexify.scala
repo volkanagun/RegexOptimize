@@ -225,7 +225,7 @@ object Regexify {
 
     if (char.isLetterOrDigit) char.toString
     else if (char == ' ') "\\s"
-    else if (char == '+' || char == '-' || char == '?' || char == '!' || char == '.' || char == ':' || char == ';' || char == '$' || char == '^' || char == '[' || char == ']' || char == '(' || char == ')' || char == '{' || char == '}' || char == '=' || char == '*') "\\" + char.toString
+    else if (char=='"' || char == '+' || char == '-' || char == '?' || char == '!' || char == '.' || char == ':' || char == ';' || char == '$' || char == '^' || char == '[' || char == ']' || char == '(' || char == ')' || char == '{' || char == '}' || char == '=' || char == '*') "\\" + char.toString
     else char.toString
 
   }
@@ -275,6 +275,10 @@ object Regexify {
     else regex
   }
 
+  def specialize(crrRegex:String):String={
+    crrRegex.replaceAll("\"", "\\\"")
+  }
+
 
   def toRegex(RegexNodeIndex: RegexNodeIndex): (String, String, String) = {
 
@@ -282,9 +286,9 @@ object Regexify {
 
       case node: RegexNodeIndex => {
 
-        val matchGroup = node.matchGroup
-        val matchValue = node.matchValue
-        val matchTxt = node.matchTxt
+        val matchGroup = node.symMatchGroup()
+        val matchValue = node.symMatchValue()
+        val matchTxt = node.symMatchTxt()
 
         val opname = node.regexOp.name
         val opcount = node.regexOp.count

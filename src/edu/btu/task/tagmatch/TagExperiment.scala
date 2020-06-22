@@ -121,11 +121,17 @@ object TagExperimentCodes {
 
   var k = 3
   var maxNodes = 20
-  var maxSamples = 100
+
+  //number of training samples
+  var maxSamples = 5
+  //pattern accept on training size
+  var acceptRatio = 0.5
+
   var patternFilterRatio = 0.5
-  var commonSampleCount = 10
-  var ngramLength = 7
-  var ngramStepLength = 5
+  //take n-gram samples above
+  var commonSampleCount = 3
+  var ngramLength = 8
+  var ngramStepLength = 10
 
   var folder = "resources/img-csvs/"
   var datasets = "resources/datasets/"
@@ -544,8 +550,8 @@ class TagExperiment {
     //true positives
     val tp = foundMatches.filter(!_.isNegative)
     val fp = foundMatches.filter(_.isNegative)
-    val tn = testingSet.filter(!_.isNegative).filter(!foundMatches.contains(_))
-    val fn = testingSet.filter(_.isNegative).filter(!foundMatches.contains(_))
+    val tn = testingSet.filter(_.isNegative).filter(!foundMatches.contains(_))
+    val fn = testingSet.filter(!_.isNegative).filter(!foundMatches.contains(_))
 
     EvaluationResult()
       .inc(testingSet.size)
@@ -598,6 +604,9 @@ class TagExperiment {
     regexGenMap = TagExperimentCodes.combineGenerator(regexGenMap)
     regexGenMap = TagExperimentCodes.filterGenerator(regexGenMap)
 
+
+    //val regexTest = regexGenMap.head._2.head.generate()
+
     val trainingMap = regexGenMap.map { case (name, regexGenerators) => {
       (name ->
         regexGenerators.map(_.generateTimely()).filter(!_.isEmpty))
@@ -620,10 +629,10 @@ class TagExperiment {
   }
 
   def evaluate(folder: String): EvaluationResult = {
-    val allsamples = readCSVFolder(folder).allsamples.take(50)
+    val mainsamples = readCSVFolder(folder).allsamples
     //now domain and positives
 
-    val trainTestSeq = crossvalidate(TagExperimentCodes.k, allsamples, TagExperimentCodes.maxSamples)
+    val trainTestSeq = crossvalidate(TagExperimentCodes.k, mainsamples, TagExperimentCodes.maxSamples)
 
     trainTestSeq.foreach { trainTest => {
       buildSamples(trainTest)

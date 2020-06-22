@@ -8,10 +8,7 @@ import scala.util.Random
 class RegexSingleString(val regexSearch: AbstractRegexSearch, val ratio: Double = 0.0, val count: Int = 20) extends RegexGenerator(ratio, count) {
 
   def filter(set: Set[String]): Set[String] = {
-    set.filter(regex => {
-      val matchAll = positives.forall(positive => positive.matches(regex))
-      matchAll
-    })
+    filterMatch(set, positives)
   }
 
   def generateTimely(): Set[String] = {
@@ -46,7 +43,7 @@ class RegexSingleString(val regexSearch: AbstractRegexSearch, val ratio: Double 
       Set()
     }
     else if (regexes.isEmpty) {
-      val singleRegex = regexNodes.head.toRegex()
+      val singleRegex = regexNodes.head.simplify().toRegex()
       Set(singleRegex)
     }
     else {
@@ -115,11 +112,9 @@ class RegexMultiString(val regexSearch: AbstractRegexSearch, filterRatio: Double
   }
 
   def filter(set: Set[String]): Set[String] = {
-    set.filter(regex => {
-      val matchAll = positives.forall(positive => positive.matches(regex))
-      val notMatchAll = negatives.forall(negative => negative.matches(regex))
-      matchAll && notMatchAll
-    })
+    val posSet = filterMatch(set, positives)
+    val negSet = filterNotMatch(set, negatives)
+    posSet.intersect(negSet)
   }
 }
 
@@ -177,11 +172,9 @@ class NGramMultiRegex(val regexSearch: AbstractRegexSearch, filterRatio: Double 
   }
 
   def filter(set: Set[String]): Set[String] = {
-    set.filter(regex => {
-      val matchAll = positives.forall(positive => positive.matches(regex))
-      val notMatchAll = negatives.forall(negative => negative.matches(regex))
-      matchAll && notMatchAll
-    })
+    val posSet = filterMatch(set, positives)
+    val negSet = filterNotMatch(set, negatives)
+    posSet.intersect(negSet)
   }
 }
 

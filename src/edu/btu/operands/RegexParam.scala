@@ -138,7 +138,7 @@ class RegexParam extends Serializable {
       mainNode = combineByOrder(mainNode, RegexNodeIndex(0, RegexOp(Regexify.optional), regexSrcOpt))
 
     }
-    else {
+    else if(!regexSrcOpt.isEmpty && !regexTrtOpt.isEmpty){
       val srcNode = RegexNodeIndex(0, RegexOp(Regexify.seq), regexSrcOpt).updateMaxIndice()
       val dstNode = RegexNodeIndex(0, RegexOp(Regexify.seq), regexTrtOpt).updateMaxIndice()
       val orNode = RegexNodeIndex(0, RegexOp(Regexify.or), Seq(srcNode, dstNode)).updateMaxIndice()

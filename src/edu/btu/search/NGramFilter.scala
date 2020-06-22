@@ -40,8 +40,14 @@ class NGramFilter(val ratio:Double) {
    * @return
    */
   def ngrams(item:String):Set[String] = {
-    val slices = item.sliding(sliceSize, stepSize).toSet
+    val nitem = remove(item)
+    val slices = nitem.sliding(sliceSize, stepSize).toSet
     slices
+  }
+
+  def remove(item:String):String={
+    item.replaceAll("\"", "")
+      .replaceAll("\\d","1").replaceAll("\\p{Punct}","!")
   }
 
   def accept(item: String): Boolean = {
@@ -82,4 +88,8 @@ class NGramFilter(val ratio:Double) {
   }
 
 
+}
+
+object NGramFilter extends NGramFilter(TagExperimentCodes.patternFilterRatio){
+  def apply() = this
 }

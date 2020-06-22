@@ -13,6 +13,17 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
 
   regexOp.setContainer(this)
 
+  def symMatchGroup():String={
+    Regexify.specialize(matchGroup)
+  }
+  def symMatchValue():String={
+    Regexify.specialize(matchValue)
+  }
+
+  def symMatchTxt():String={
+    Regexify.specialize(matchTxt)
+  }
+
   def isEmpty():Boolean=elems.isEmpty
 
   def getRndValue(rnd:Random):String={

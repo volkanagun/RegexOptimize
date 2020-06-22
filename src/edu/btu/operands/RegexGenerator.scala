@@ -1,6 +1,7 @@
 package edu.btu.operands
 
 import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveExact, NGramFilter, SinglePositiveApprox, SinglePositiveExact}
+import edu.btu.task.tagmatch.TagExperimentCodes
 
 abstract class RegexGenerator(val filterRatio: Double = 0.0, val topCount: Int = 20) {
 
@@ -36,6 +37,18 @@ abstract class RegexGenerator(val filterRatio: Double = 0.0, val topCount: Int =
 
   def longest(regexes: Set[String]): String = {
     regexes.toSeq.map(str => (str, str.length)).sortBy(_._2).reverse.head._1
+  }
+
+  def filterMatch(regexSet:Set[String], samples:Set[String]):Set[String]={
+    val counts = regexSet.map(regex=> (regex, samples.count(value=> value.matches(regex))))
+    val sum = samples.size
+    counts.filter{case(regex,cnt)=> cnt.toDouble/sum > TagExperimentCodes.acceptRatio}.map(_._1)
+  }
+
+  def filterNotMatch(regexSet:Set[String], samples:Set[String]):Set[String]={
+    val counts = regexSet.map(regex=> (regex, samples.count(value=> !value.matches(regex))))
+    val sum = samples.size
+    counts.filter{case(regex,cnt)=> cnt.toDouble/sum >  TagExperimentCodes.acceptRatio}.map(_._1)
   }
 
   //region Description
