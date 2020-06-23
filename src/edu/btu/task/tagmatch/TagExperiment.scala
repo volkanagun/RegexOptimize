@@ -33,8 +33,9 @@ case class EvaluationResult() {
   var foldResults = Seq[EvaluationResult]()
 
   def summary(): this.type = {
+    val foldCount = foldResults.size
     System.out.println(s"Total number of experiments: ${count}")
-    System.out.println(s"Total number of folds: ${foldResults.length}")
+    System.out.println(s"Total number of folds: ${foldCount}")
     System.out.println(s"Total averages")
 
     print("True-Positives", tpCount)
@@ -120,19 +121,24 @@ object TagExperimentCodes {
   val samplesFromFilename = "FILENAME-SAMPLES"
 
   var k = 3
-  var maxNodes = 20
+  var maxNodes = 150
 
   //number of training samples per domain
+  //for better accuracy increase it
+  //for better efficiency decrease it
   var maxSamples = 50
   //ratio of regex patterns constructed by training samples that match the given sample
-  //used to filter accepted paterns
-  var acceptRatio = 0.7
+  //used to filter accepted patterns
+  var acceptRatio = 0.8
 
   //the ratio of common n-gram dictionary patterns for the sample
-  //accept or reject the positive or negative sample
+  //accept or reject the positive or negative sample pattern for n-grams
   var patternFilterRatio = 0.7
   //take n-gram samples count (top counted ngram patterns) (topCount)
-  var commonSampleCount = 10
+
+  //increase it for better accuracy
+  //decrease it for better efficiency
+  var commonSampleCount = 100
   var ngramLength = 8
   var ngramStepLength = 10
 

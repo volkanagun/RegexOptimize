@@ -45,7 +45,7 @@ abstract class RegexGenerator(val filterRatio: Double = 0.0, val topCount: Int =
     counts.filter{case(regex,cnt)=> cnt.toDouble/sum > TagExperimentCodes.acceptRatio}.map(_._1)
   }
 
-  def filterNotMatch(regexSet:Set[String], samples:Set[String]):Set[String]={
+  def filterNotMatch(regexSet:Set[String], samples:Set[String]):Set[String] = {
     val counts = regexSet.map(regex=> (regex, samples.count(value=> !value.matches(regex))))
     val sum = samples.size
     counts.filter{case(regex,cnt)=> cnt.toDouble/sum >  TagExperimentCodes.acceptRatio}.map(_._1)
@@ -76,7 +76,6 @@ abstract class RegexGenerator(val filterRatio: Double = 0.0, val topCount: Int =
 
   def test(positives: Seq[String], negatives: Seq[String], regexSearch: AbstractRegexSearch, testIndex: Int): Unit = {
     if (testIndex == 3) testOrEfficient(positives, negatives, regexSearch)
-
   }
 
   def node(value: String, i: Int): RegexNodeIndex = RegexNodeIndex(i, RegexOp(Regexify.seq), Seq())
