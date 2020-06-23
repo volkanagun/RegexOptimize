@@ -122,13 +122,16 @@ object TagExperimentCodes {
   var k = 3
   var maxNodes = 20
 
-  //number of training samples
+  //number of training samples per domain
   var maxSamples = 50
-  //pattern accept on training size
+  //ratio of regex patterns constructed by training samples that match the given sample
+  //used to filter accepted paterns
   var acceptRatio = 0.7
 
-  var patternFilterRatio = 0.5
-  //take n-gram samples count top counted ngram patterns (topCount)
+  //the ratio of common n-gram dictionary patterns for the sample
+  //accept or reject the positive or negative sample
+  var patternFilterRatio = 0.7
+  //take n-gram samples count (top counted ngram patterns) (topCount)
   var commonSampleCount = 10
   var ngramLength = 8
   var ngramStepLength = 10
