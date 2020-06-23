@@ -123,13 +123,13 @@ object TagExperimentCodes {
   var maxNodes = 20
 
   //number of training samples
-  var maxSamples = 5
+  var maxSamples = 50
   //pattern accept on training size
-  var acceptRatio = 0.5
+  var acceptRatio = 0.7
 
   var patternFilterRatio = 0.5
-  //take n-gram samples above
-  var commonSampleCount = 3
+  //take n-gram samples count top counted ngram patterns (topCount)
+  var commonSampleCount = 10
   var ngramLength = 8
   var ngramStepLength = 10
 
