@@ -3,7 +3,7 @@ package edu.btu.search
 import edu.btu.operands.RegexNodeIndex
 import edu.btu.task.tagmatch.TagExperimentCodes
 
-class NGramFilter(val ratio:Double) extends Serializable {
+class NGramFilter(var acceptRatio:Double) extends Serializable {
   //the regex must fill in the blanks
   //multiple regular expressions
   //generate most common expressions as n-gram dictionary
@@ -11,7 +11,7 @@ class NGramFilter(val ratio:Double) extends Serializable {
   var freqDictionary = Map[String, Int]()
   var stepSize = TagExperimentCodes.ngramStepLength;
   var sliceSize = TagExperimentCodes.ngramLength;
-  var acceptRatio = ratio
+
   var topCount = 50;
 
   def setTopCount(count:Int):this.type={
@@ -50,6 +50,7 @@ class NGramFilter(val ratio:Double) extends Serializable {
       .replaceAll("\\d","1").replaceAll("\\p{Punct}","!")
   }
 
+  //accept an attribute value as representative
   def accept(item: String): Boolean = {
     val slices = ngrams(item)
     val ratio = slices.map(slice=> freqDictionary.getOrElse(slice, 0)).sum.toDouble / slices.size
@@ -73,7 +74,8 @@ class NGramFilter(val ratio:Double) extends Serializable {
       val slices = ngrams(item)
       slices.foreach(slice=> {freqDictionary = freqDictionary.updated(slice, freqDictionary.getOrElse(slice, 0)+1)})
     })
-    topCount = Math.min((freqDictionary.size * acceptRatio).toInt+1, topCount)
+
+    //topCount = Math.min((freqDictionary.size * acceptRatio).toInt+1, topCount)
     this
   }
 

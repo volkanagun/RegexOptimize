@@ -91,6 +91,12 @@ abstract class AbstractRegexSearch() extends Serializable {
     this
   }
 
+  def setPositive(samples: Set[String]): this.type = {
+    val sources = samples.map(regexify(_).elems).toSeq
+    positives = sources
+    this
+  }
+
   def addRandomPositive(samples:Seq[String]):this.type ={
     val sources = samples.map(regexify(_).elems.flatMap(r => if(r.isEmpty()) Seq(r) else  r.elems))
     positives ++= sources
@@ -109,12 +115,18 @@ abstract class AbstractRegexSearch() extends Serializable {
     this
   }
 
+
   def addNegative(samples: Set[String]): this.type = {
     val sources = samples.map(regexify(_).elems)
     negatives ++= sources
     this
   }
 
+  def setNegative(samples: Set[String]): this.type = {
+    val sources = samples.map(regexify(_).elems).toSeq
+    negatives = sources
+    this
+  }
   def addRandomNegative(samples: Seq[String]): this.type = {
     val sources = samples.map(regexify(_).elems.flatMap(r => if(r.isEmpty()) Seq(r) else  r.elems))
     negatives ++= sources

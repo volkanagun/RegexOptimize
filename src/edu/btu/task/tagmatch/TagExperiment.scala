@@ -121,7 +121,7 @@ object TagExperimentCodes {
   val samplesFromFilename = "FILENAME-SAMPLES"
 
   var k = 3
-  var maxNodes = 150
+  var maxPaths = 3
 
   //number of training samples per domain
   //for better accuracy increase it
@@ -129,7 +129,7 @@ object TagExperimentCodes {
   var maxSamples = 50
   //ratio of regex patterns constructed by training samples that match the given sample
   //used to filter accepted patterns
-  var acceptRatio = 0.8
+  var acceptRatio = 0.9
 
   //the ratio of common n-gram dictionary patterns for the sample
   //accept or reject the positive or negative sample pattern for n-grams
@@ -138,9 +138,9 @@ object TagExperimentCodes {
 
   //increase it for better accuracy
   //decrease it for better efficiency
-  var commonSampleCount = 100
-  var ngramLength = 5
-  var ngramStepLength = 5
+  var topCount = 10
+  var ngramLength = 7
+  var ngramStepLength = 1
 
   var folder = "resources/img-csvs/"
   var datasets = "resources/datasets/"
@@ -149,20 +149,57 @@ object TagExperimentCodes {
 
   //Filter generators
   val allMapFilename = "resources/binary/regexGen.bin"
+  val allSamplesFilename = "resources/binary/samples.bin"
 
-  def save(regexGenMap : Array[(String, Seq[RegexGenerator])]):Unit={
+  def mapBinaryExists(): Boolean = {
+    new File(allMapFilename).exists()
+  }
+
+  def samplesBinaryExists(): Boolean = {
+    new File(allSamplesFilename).exists()
+  }
+
+  def loadSamples(samples: => Seq[TagSample]): Seq[TagSample] = {
+    if (samplesBinaryExists()) {
+      loadObject[Seq[TagSample]](allSamplesFilename)
+    }
+    else {
+      samples
+    }
+  }
+
+  def saveSamples(samples: Seq[TagSample]): Seq[TagSample] = {
+    saveObject[Seq[TagSample]](allSamplesFilename, samples)
+  }
+
+  def save(regexGenMap: Array[(String, Seq[RegexGenerator])]): Unit = {
     val objout = new ObjectOutputStream(new FileOutputStream(allMapFilename))
     objout.writeObject(regexGenMap)
     objout.close()
   }
 
-  def load():Array[(String, Seq[RegexGenerator])]={
-    if(!new File(allMapFilename).exists()) return null
+  def load(): Array[(String, Seq[RegexGenerator])] = {
+    if (!new File(allMapFilename).exists()) return null
 
     val objin = new ObjectInputStream(new FileInputStream(allMapFilename))
     val array = objin.readObject().asInstanceOf[Array[(String, Seq[RegexGenerator])]]
     objin.close()
     array
+  }
+
+  def loadObject[A](filename: String): A = {
+    val objin = new ObjectInputStream(new FileInputStream(filename))
+    val value = objin.readObject().asInstanceOf[A]
+    objin.close()
+    value
+  }
+
+
+  def saveObject[A](filename: String, obj: A): A = {
+    val objin = new ObjectOutputStream(new FileOutputStream(filename))
+    objin.writeObject(obj)
+    objin.close()
+    obj
   }
 
 
@@ -171,12 +208,14 @@ object TagExperimentCodes {
     println("Filter generators...")
     regexGenMap.foreach { case (_, generators) => {
       if (TagExperimentCodes.doNGramFilter) generators.map(generator => generator.filterSlice())
-    }}
+    }
+    }
 
     regexGenMap.map { case (name, generators) => {
       val nonEmptyGens = generators.filter(regexGenerator => !regexGenerator.positives.isEmpty)
       (name, nonEmptyGens)
-    }}.filter(!_._2.isEmpty)
+    }
+    }.filter(!_._2.isEmpty)
 
   }
 
@@ -193,7 +232,7 @@ object TagExperimentCodes {
         })
         (name, Seq(head))
       }
-      else{
+      else {
         (name, Seq())
       }
     }
@@ -378,7 +417,7 @@ class TagExperiment {
 
   //build from train and test cases
   //construct
-  def buildSamples(trainTest: TrainTest): this.type = {
+  def buildSamples(trainTest: => TrainTest): this.type = {
 
     println(s"Building samples for train-test")
     val crrTrainFileMap = trainTest.train.groupBy(_.filename)
@@ -619,7 +658,7 @@ class TagExperiment {
     TimeBox.measureTime[EvaluationResult](name, evaluateMatch(name, positives, negatives, testingSet))
   }
 
-  def evaluate(trainTest: TrainTest): this.type = {
+  def evaluate(trainTest: => TrainTest): this.type = {
     println(s"Evaluating training dataset")
 
     evaluate(trainTest.train.toSet, trainTest.test.toSet)
@@ -627,24 +666,20 @@ class TagExperiment {
   }
 
 
-  def evaluate(trainingSet: Set[TagSample], testingSet: Set[TagSample]): this.type = {
+  def evaluate(trainingSet: => Set[TagSample], testingSet: => Set[TagSample]): this.type = {
 
 
-    var regexGenMap = TagExperimentCodes.load()
-    if(regexGenMap == null) {
-      regexGenMap = TagExperimentCodes.regexGenerator(trainingSet).toArray
-      regexGenMap = TagExperimentCodes.combineGenerator(regexGenMap)
-      regexGenMap = TagExperimentCodes.filterGenerator(regexGenMap)
-      TagExperimentCodes.save(regexGenMap)
-    }
-
+    var regexGenMap = TagExperimentCodes.regexGenerator(trainingSet).toArray
+    regexGenMap = TagExperimentCodes.combineGenerator(regexGenMap)
+    regexGenMap = TagExperimentCodes.filterGenerator(regexGenMap)
 
     //val regexTest = regexGenMap.head._2.head.generate()
 
     val trainingMap = regexGenMap.map { case (name, regexGenerators) => {
       (name ->
         regexGenerators.map(_.generateTimely()).filter(!_.isEmpty))
-    }}.toMap.filter{case(name, set)=> !set.isEmpty}
+    }
+    }.toMap.filter { case (name, set) => !set.isEmpty }
 
     val eval = if (TagExperimentCodes.isSingle()) {
       val name = "evaluation-single-regex"
@@ -663,9 +698,8 @@ class TagExperiment {
   }
 
   def evaluate(folder: String): EvaluationResult = {
-    val mainsamples = readCSVFolder(folder).allsamples
-    //now domain and positives
 
+    val mainsamples = TagExperimentCodes.loadSamples(readCSVFolder(folder).allsamples)
     val trainTestSeq = crossvalidate(TagExperimentCodes.k, mainsamples, TagExperimentCodes.maxSamples)
 
     trainTestSeq.foreach { trainTest => {
@@ -673,28 +707,29 @@ class TagExperiment {
     }
     }
 
-    trainTestSeq.foreach(trainTest => {
+    for (p <- 0 until TagExperimentCodes.k) {
+      val trainTest = trainTestSeq(p)
       evaluate(trainTest)
-    })
+    }
 
     evaluationResult
-
   }
 
-  def crossvalidate(k: Int, allSamples: Seq[TagSample], maxSize: Int = 5): Seq[TrainTest] = {
+  def crossvalidate(k: Int, allSamples: => Seq[TagSample], maxSize: Int = 5): Seq[TrainTest] = {
     var main = Seq[TrainTest]()
 
-    allsamples.groupBy(_.domain).foreach { case (domain, samples) => {
-      val positives = samples.filter(!_.isNegative).take(maxSize)
-      val negatives = samples.filter(_.isNegative).take(maxSize)
-      val posDist = positives.length.toDouble / k
-      val negDist = negatives.length.toDouble / k
+    allsamples.groupBy(_.domain).foreach {
+      case (domain, samples) => {
+        val positives = samples.filter(!_.isNegative).take(maxSize)
+        val negatives = samples.filter(_.isNegative).take(maxSize)
+        val posDist = positives.length.toDouble / k
+        val negDist = negatives.length.toDouble / k
 
-      if (posDist > 0) {
-        main = crossUpdate(main, crossvalidateAll(k, positives))
-        main = crossUpdate(main, crossvalidateAll(k, negatives))
+        if (posDist > 0) {
+          main = crossUpdate(main, crossvalidateAll(k, positives))
+          main = crossUpdate(main, crossvalidateAll(k, negatives))
+        }
       }
-    }
     }
 
     main
@@ -702,7 +737,10 @@ class TagExperiment {
 
   def crossUpdate(main: Seq[TrainTest], crr: Seq[TrainTest]): Seq[TrainTest] = {
     if (main.length == crr.length) {
-      main.zip(crr).foreach { case (m, c) => m.train = m.train ++ c.train; m.test ++= c.test }
+      main.zip(crr).foreach {
+        case (m, c) => m.train = m.train ++ c.train;
+          m.test ++= c.test
+      }
       main
     }
     else {
@@ -712,7 +750,9 @@ class TagExperiment {
 
   def crossvalidateAll(k: Int, crrDomainSamples: Seq[TagSample]): Seq[TrainTest] = {
 
-    println(s"Splitting dataset for cross-validation of ${k}")
+    println(s"Splitting dataset for cross-validation of ${
+      k
+    }")
     //consider positives and negatives
     var crrSamples = crrDomainSamples
     val splitSize = crrDomainSamples.size / k

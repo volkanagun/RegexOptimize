@@ -28,7 +28,7 @@ class RegexSingleString(val regexSearch: AbstractRegexSearch, val ratio: Double 
       .searchDirectional()
       .sortBy(_.cost)
       .toArray
-      .take(TagExperimentCodes.maxNodes)
+      .take(TagExperimentCodes.maxPaths)
 
     val regexNodes = paths.map(crrPath => {
       crrPath.toOrRegex().constructRegexNode()
@@ -185,32 +185,32 @@ class NGramMultiRegex(val regexSearch: AbstractRegexSearch, filterRatio: Double 
 object RegexString {
 
   def applyExact(positives: Set[String]): RegexGenerator = {
-    new RegexSingleString(new SinglePositiveExact(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.commonSampleCount).addPositives(positives)
+    new RegexSingleString(new SinglePositiveExact(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.topCount).addPositives(positives)
   }
 
   def applyExactAdaptive(positives: Set[String]): RegexGenerator = {
     if (positives.head.length > 20) {}
-    new RegexSingleString(new SinglePositiveExact(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.commonSampleCount).addPositives(positives)
+    new RegexSingleString(new SinglePositiveExact(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.topCount).addPositives(positives)
   }
 
   def applyApproximate(positives: Set[String]): RegexGenerator = {
-    new RegexSingleString(new SinglePositiveApprox(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.commonSampleCount).addPositives(positives)
+    new RegexSingleString(new SinglePositiveApprox(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.topCount).addPositives(positives)
   }
 
   def applyExact(positives: Set[String], negatives: Set[String]): RegexGenerator = {
-    new RegexMultiString(new MultiPositiveExact(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.commonSampleCount).addPositives(positives).addNegatives(negatives)
+    new RegexMultiString(new MultiPositiveExact(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.topCount).addPositives(positives).addNegatives(negatives)
   }
 
   def applyApproximate(positives: Set[String], negatives: Set[String]): RegexGenerator = {
-    new RegexMultiString(new MultiPositiveApprox(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.commonSampleCount).addPositives(positives).addNegatives(negatives)
+    new RegexMultiString(new MultiPositiveApprox(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.topCount).addPositives(positives).addNegatives(negatives)
   }
 
   def applyExactNGram(positives: Set[String], negatives: Set[String]): RegexGenerator = {
-    new NGramMultiRegex(new MultiPositiveExact(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.commonSampleCount).addPositives(positives).addNegatives(negatives)
+    new NGramMultiRegex(new MultiPositiveExact(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.topCount).addPositives(positives).addNegatives(negatives)
   }
 
   def applyApproximateNGram(positives: Set[String], negatives: Set[String]): RegexGenerator = {
-    new NGramMultiRegex(new MultiPositiveApprox(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.commonSampleCount).addPositives(positives).addNegatives(negatives)
+    new NGramMultiRegex(new MultiPositiveApprox(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.topCount).addPositives(positives).addNegatives(negatives)
   }
 
 }

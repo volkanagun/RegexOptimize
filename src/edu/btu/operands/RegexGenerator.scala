@@ -3,7 +3,7 @@ package edu.btu.operands
 import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveExact, NGramFilter, SinglePositiveApprox, SinglePositiveExact}
 import edu.btu.task.tagmatch.TagExperimentCodes
 
-abstract class RegexGenerator(val filterRatio: Double = 0.0, val topCount: Int = 20) extends Serializable {
+abstract class RegexGenerator(val acceptRatio: Double = 0.0, val topCount: Int = 20) extends Serializable {
 
   def generateTimely(): Set[String]
 
@@ -12,8 +12,8 @@ abstract class RegexGenerator(val filterRatio: Double = 0.0, val topCount: Int =
   var positives: Set[String] = Set()
   var negatives: Set[String] = Set()
 
-  var positiveFilter = new NGramFilter(filterRatio).setTopCount(topCount)
-  var negativeFilter = new NGramFilter(filterRatio).setTopCount(topCount)
+  var positiveFilter = new NGramFilter(acceptRatio).setTopCount(topCount)
+  var negativeFilter = new NGramFilter(acceptRatio).setTopCount(topCount)
 
   def addPositives(positives: Set[String]): this.type = {
     this.positives = this.positives ++ positives
