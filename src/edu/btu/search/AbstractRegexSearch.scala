@@ -301,7 +301,7 @@ abstract class AbstractRegexSearch() extends Serializable {
   }
 
   //looks buggy looks fixed
-  protected def searchDirectional(path: Path, source: Seq[RegexNodeIndex], target: Seq[RegexNodeIndex], i: Int, j: Int): Seq[Path] = {
+  protected def searchDirectional(path: Path, source: Seq[RegexNodeIndex], target: Seq[RegexNodeIndex], i: Int, j: Int) : Seq[Path] = {
 
     val sourceLength = source.length
     val targetLength = target.length
@@ -313,6 +313,7 @@ abstract class AbstractRegexSearch() extends Serializable {
     val blockCost = searchCost(path, cell)
 
     val nextPath = path.addCell(cell, blockCost, additionalCost)
+
     if (cell.isLast(sourceLength, targetLength)) {
       paths = paths :+ nextPath
     }

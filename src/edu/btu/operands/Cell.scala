@@ -3,7 +3,7 @@ package edu.btu.operands
 import edu.btu.search.Matrix
 
 
-case class Cell(i: Int, j: Int, var source: RegexNodeIndex = null, var target: RegexNodeIndex = null, var matching: Int = -1, var cost: Double = -1d) {
+case class Cell(i: Int, j: Int, var source: RegexNodeIndex = null, var target: RegexNodeIndex = null, var matching: Int = -1, var cost: Double = -1d) extends Serializable {
 
   var rowEnd = false;
   var colEnd = false;

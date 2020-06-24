@@ -12,7 +12,7 @@ class TagSample(override val tagName: String, override val properties: Seq[(Stri
   val ngramFilter = NGramFilter()
 
 
-  var psMap = properties.map { case (k, v) => k -> ngramFilter.remove(v) }.toMap
+  var psMap = properties.map { case (k, v) => k -> ngramFilter.clean(v) }.toMap
 
   def matchWithPositive(regexMap: Map[String, Set[String]], defaultValue: Boolean = true): Boolean = {
     var count = 0

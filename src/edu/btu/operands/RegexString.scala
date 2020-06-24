@@ -13,6 +13,7 @@ class RegexSingleString(val regexSearch: AbstractRegexSearch, val ratio: Double 
 
   def generateTimely(): Set[String] = {
     System.out.println("Generating single-regex...")
+    System.out.println(s"Number of samples :${positives.size}...")
     val set = TimeBox.measureTime[Set[String]]("Regex-Single", generate())
     filterTimely(set)
   }

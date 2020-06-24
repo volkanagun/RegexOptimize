@@ -96,13 +96,13 @@ class SinglePositiveExact() extends AbstractRegexSearch() {
 
   override def searchDirectional(): Seq[Path] = {
 
-    TimeBox.measureTime[Seq[Path]]("exact-single-positive", searchDirectionalRegular(positives))
+    TimeBox.measureTime[Seq[Path]]("search-exact-single-positive", searchDirectionalRegular(positives))
 
   }
 
   override def searchNegative(): Seq[Path] = {
 
-    TimeBox.measureTime[Seq[Path]]("exact-single-positive", searchDirectionalRegular(negatives))
+    TimeBox.measureTime[Seq[Path]]("search-exact-single-positive", searchDirectionalRegular(negatives))
 
   }
 

@@ -3,7 +3,7 @@ package edu.btu.search
 import edu.btu.operands.RegexNodeIndex
 import edu.btu.task.tagmatch.TagExperimentCodes
 
-class NGramFilter(val ratio:Double) {
+class NGramFilter(val ratio:Double) extends Serializable {
   //the regex must fill in the blanks
   //multiple regular expressions
   //generate most common expressions as n-gram dictionary
@@ -40,12 +40,12 @@ class NGramFilter(val ratio:Double) {
    * @return
    */
   def ngrams(item:String):Set[String] = {
-    val nitem = remove(item)
+    val nitem = clean(item)
     val slices = nitem.sliding(sliceSize, stepSize).toSet
     slices
   }
 
-  def remove(item:String):String={
+  def clean(item:String):String={
     item.replaceAll("\"", "")
       .replaceAll("\\d","1").replaceAll("\\p{Punct}","!")
   }

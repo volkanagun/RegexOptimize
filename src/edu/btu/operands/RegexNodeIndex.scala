@@ -4,7 +4,7 @@ import scala.util.Random
 import scala.util.control.Breaks
 
 
-case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[RegexNodeIndex] = Seq()) {
+case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[RegexNodeIndex] = Seq()) extends Serializable {
 
   var matchTxt = ""
   var matchValue = ""

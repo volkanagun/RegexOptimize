@@ -1,6 +1,6 @@
 package edu.btu.task.tagmatch
 
-import java.io.File
+import java.io.{File, FileInputStream, FileOutputStream, ObjectInputStream, ObjectOutputStream}
 
 import edu.btu.operands.{RegexGenerator, RegexString}
 import edu.btu.task.tagmatch.TagExperimentCodes.experimentCycle
@@ -139,8 +139,8 @@ object TagExperimentCodes {
   //increase it for better accuracy
   //decrease it for better efficiency
   var commonSampleCount = 100
-  var ngramLength = 8
-  var ngramStepLength = 10
+  var ngramLength = 5
+  var ngramStepLength = 5
 
   var folder = "resources/img-csvs/"
   var datasets = "resources/datasets/"
@@ -148,6 +148,24 @@ object TagExperimentCodes {
   var experimentCycle = Array[String](singleExact, regexMulti)
 
   //Filter generators
+  val allMapFilename = "resources/binary/regexGen.bin"
+
+  def save(regexGenMap : Array[(String, Seq[RegexGenerator])]):Unit={
+    val objout = new ObjectOutputStream(new FileOutputStream(allMapFilename))
+    objout.writeObject(regexGenMap)
+    objout.close()
+  }
+
+  def load():Array[(String, Seq[RegexGenerator])]={
+    if(!new File(allMapFilename).exists()) return null
+
+    val objin = new ObjectInputStream(new FileInputStream(allMapFilename))
+    val array = objin.readObject().asInstanceOf[Array[(String, Seq[RegexGenerator])]]
+    objin.close()
+    array
+  }
+
+
   def filterGenerator(regexGenMap: Array[(String, Seq[RegexGenerator])]): Array[(String, Seq[RegexGenerator])] = {
 
     println("Filter generators...")
@@ -189,6 +207,7 @@ object TagExperimentCodes {
 
       val positiveMap = training.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
         .groupBy(_._1).mapValues(_.map(_._2)).mapValues(positiveCases => Seq(RegexString.applyExact(positiveCases)))
+
       positiveMap
 
     }
@@ -196,6 +215,7 @@ object TagExperimentCodes {
 
       val positiveMap = training.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
         .groupBy(_._1).mapValues(_.map(_._2)).mapValues(positiveCases => Seq(RegexString.applyApproximate(positiveCases)))
+
       positiveMap
 
     }
@@ -609,9 +629,14 @@ class TagExperiment {
 
   def evaluate(trainingSet: Set[TagSample], testingSet: Set[TagSample]): this.type = {
 
-    var regexGenMap = TagExperimentCodes.regexGenerator(trainingSet).toArray
-    regexGenMap = TagExperimentCodes.combineGenerator(regexGenMap)
-    regexGenMap = TagExperimentCodes.filterGenerator(regexGenMap)
+
+    var regexGenMap = TagExperimentCodes.load()
+    if(regexGenMap == null) {
+      regexGenMap = TagExperimentCodes.regexGenerator(trainingSet).toArray
+      regexGenMap = TagExperimentCodes.combineGenerator(regexGenMap)
+      regexGenMap = TagExperimentCodes.filterGenerator(regexGenMap)
+      TagExperimentCodes.save(regexGenMap)
+    }
 
 
     //val regexTest = regexGenMap.head._2.head.generate()
