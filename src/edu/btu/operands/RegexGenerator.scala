@@ -3,7 +3,7 @@ package edu.btu.operands
 import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveExact, NGramFilter, SinglePositiveApprox, SinglePositiveExact}
 import edu.btu.task.tagmatch.TagExperimentCodes
 
-abstract class RegexGenerator(val acceptRatio: Double = 0.0, val topCount: Int = 20) extends Serializable {
+abstract class RegexGenerator(val patternFilterRatio: Double = 0.0, val topCount: Int = 20) extends Serializable {
 
   def generateTimely(): Set[String]
 
@@ -12,8 +12,8 @@ abstract class RegexGenerator(val acceptRatio: Double = 0.0, val topCount: Int =
   var positives: Set[String] = Set()
   var negatives: Set[String] = Set()
 
-  var positiveFilter = new NGramFilter(acceptRatio).setTopCount(topCount)
-  var negativeFilter = new NGramFilter(acceptRatio).setTopCount(topCount)
+  var positiveFilter = new NGramFilter(patternFilterRatio).setTopCount(topCount)
+  var negativeFilter = new NGramFilter(patternFilterRatio).setTopCount(topCount)
 
   def addPositives(positives: Set[String]): this.type = {
     this.positives = this.positives ++ positives
@@ -39,16 +39,18 @@ abstract class RegexGenerator(val acceptRatio: Double = 0.0, val topCount: Int =
     regexes.toSeq.map(str => (str, str.length)).sortBy(_._2).reverse.head._1
   }
 
-  def filterMatch(regexSet:Set[String], samples:Set[String]):Set[String]={
-    val counts = regexSet.map(regex=> (regex, samples.count(value=> value.matches(regex))))
-    val sum = samples.size
-    counts.filter{case(regex,cnt)=> cnt.toDouble/sum > TagExperimentCodes.acceptRatio}.map(_._1)
+  def filterMatch(regexSet:Set[String], trainingSamples:Set[String]):Set[String]={
+    val counts = regexSet.map(regex=> (regex, trainingSamples.count(value=> value.matches(regex))))
+    val sum = trainingSamples.size
+
+    counts.filter{case(regex,cnt)=> cnt.toDouble/sum > TagExperimentCodes.regexMatchRatio}.map(_._1)
   }
 
-  def filterNotMatch(regexSet:Set[String], samples:Set[String]):Set[String] = {
-    val counts = regexSet.map(regex=> (regex, samples.count(value=> !value.matches(regex))))
-    val sum = samples.size
-    counts.filter{case(regex,cnt)=> cnt.toDouble/sum >  TagExperimentCodes.acceptRatio}.map(_._1)
+  def filterNotMatch(regexSet:Set[String], trainingSamples:Set[String]):Set[String] = {
+    val counts = regexSet.map(regex=> (regex, trainingSamples.count(value=> !value.matches(regex))))
+    val sum = trainingSamples.size
+
+    counts.filter{case(regex,cnt)=> cnt.toDouble/sum >  TagExperimentCodes.regexMatchRatio}.map(_._1)
   }
 
   //region Description
@@ -124,24 +126,7 @@ abstract class RegexGenerator(val acceptRatio: Double = 0.0, val topCount: Int =
 
   def testOrEfficient(sequences: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
 
-    val paths = regexSearch.addPositive(sequences)
-      .searchDirectional()
-      .sortBy(_.cost)
-      .toArray
-
-    //correct
-    val regexNodes = paths.map(crrPath => {
-      val orNode = crrPath.toOrRegex()
-      val newNode = orNode.constructRegexNode()
-      newNode
-    }).distinct
-
-    //fix here and toOrNodeIndex
-    val indices = for (x <- 0 until regexNodes.length; y <- x+1 until regexNodes.length) yield (x, y)
-    //multiple regexes with minimum length
-    val elems =  indices.map { case (x, y) => (regexNodes(x).combineOrNode(regexNodes(y))) }
-    val regexes = elems.map(nodeIndex => nodeIndex.toRegex())
-
+    val regexes = RegexString.apply(sequences.toSet, regexSearch).generate().toSeq
     matchTest(regexes, sequences)
 
   }
@@ -179,6 +164,7 @@ abstract class RegexGenerator(val acceptRatio: Double = 0.0, val topCount: Int =
   def matchTest(regexes: Seq[String], sequences: Seq[String], positiveMatch: Boolean = true): Unit = {
 
     println("Regular expression count: " + regexes.length)
+    var count = Map[String, Int]()
     regexes.foreach(regex => {
       println(s"Should match all : ${positiveMatch}")
       sequences.foreach(sequence => {
@@ -186,10 +172,13 @@ abstract class RegexGenerator(val acceptRatio: Double = 0.0, val topCount: Int =
           println(s"No - match: ${sequence} and regex:${regex}")
         }
         else {
+          count = count.updated(sequence, count.getOrElse(sequence, 1))
           println(s"Yes - match: ${sequence} and regex:${regex}")
         }
       })
     })
+
+    println(s"Match ratio: ${count.map(_._2).sum.toDouble/sequences.length}")
   }
 
 

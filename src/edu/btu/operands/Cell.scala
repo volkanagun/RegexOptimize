@@ -45,7 +45,7 @@ case class Cell(i: Int, j: Int, var source: RegexNodeIndex = null, var target: R
   }
 
   def largestIndice():RegexNodeIndex={
-    if(source.indice >= target.indice) source
+    if(source.maxDex >= target.maxDex) source
     else target
   }
 
@@ -82,18 +82,18 @@ case class Cell(i: Int, j: Int, var source: RegexNodeIndex = null, var target: R
   //remove or modify the negative cell from the current cell
   def negativeCombinations(cell:Cell):Array[Cell] = {
     if(equalSourceTarget() && cell.equalSourceTarget()) {
-      Array(Cell(source.indice, cell.source.indice,  source, cell.source))
+      Array(Cell(source.maxDex, cell.source.maxDex,  source, cell.source))
     }
     else if(equalSourceTarget()) {
-      Array(Cell(source.indice, cell.source.indice,  source, cell.source), Cell(source.indice, cell.target.indice,  source, cell.target))
+      Array(Cell(source.maxDex, cell.source.maxDex,  source, cell.source), Cell(source.maxDex, cell.target.maxDex,  source, cell.target))
     }
     else if(cell.equalSourceTarget()) {
-      Array(Cell(source.indice, cell.source.indice, source, cell.source), Cell(target.indice, cell.source.indice, target, cell.source))
+      Array(Cell(source.maxDex, cell.source.maxDex, source, cell.source), Cell(target.maxDex, cell.source.maxDex, target, cell.source))
     }
     else
     {
-      Array(Cell(source.indice,cell.source.indice, source,   cell.source),  Cell(source.indice, cell.target.indice, source, cell.target),
-        Cell(target.indice, cell.source.indice, target, cell.source), Cell(target.indice, cell.target.indice, target, cell.target))
+      Array(Cell(source.maxDex,cell.source.maxDex, source,   cell.source),  Cell(source.maxDex, cell.target.maxDex, source, cell.target),
+        Cell(target.maxDex, cell.source.maxDex, target, cell.source), Cell(target.maxDex, cell.target.maxDex, target, cell.target))
     }
   }
 

@@ -22,6 +22,23 @@ class RegexSingleString(val regexSearch: AbstractRegexSearch, val ratio: Double 
     TimeBox.measureTime[Set[String]]("Regex-Single-Filter", filter(set))
   }
 
+  def combineBy(seq:Seq[RegexNodeIndex], size:Int, id:Int) :RegexNodeIndex={
+    //take several combine if not have it
+    var mainNode = Regexify.toOrNode(0)
+    val shuffle = new Random((TagExperimentCodes.shuffleSeed+id)).shuffle(seq).take(size)
+    shuffle.foreach(rnode=> if(!mainNode.contains(rnode)) mainNode = mainNode.combineOrNode(rnode))
+    mainNode
+  }
+
+  def combine(seq:Seq[RegexNodeIndex], size:Int, repeat:Int = 3):Seq[RegexNodeIndex]={
+    var fseq = Seq[RegexNodeIndex]()
+    for(k<-0 until repeat){
+      fseq :+= combineBy(seq, size, k)
+    }
+
+    fseq
+  }
+
   def generate(): Set[String] = {
 
     val paths = regexSearch.addPositive(positives)
@@ -32,24 +49,13 @@ class RegexSingleString(val regexSearch: AbstractRegexSearch, val ratio: Double 
 
     val regexNodes = paths.map(crrPath => {
       crrPath.toOrRegex().constructRegexNode()
-    }).distinct
+    })
 
-    val indices = for (x <- 0 until regexNodes.length; y <- 0 until regexNodes.length) yield (x, y)
-    val elems = indices.filter { case (x, y) => x != y }
-      .map { case (x, y) => (regexNodes(x).combineOrNode(regexNodes(y))) }
 
+    val elems = combine(regexNodes, TagExperimentCodes.maxCombineSize, TagExperimentCodes.maxRandomSampleSize)
     val regexes = elems.map(nodeIndex => nodeIndex.toRegex()).toSet
 
-    if(regexNodes.isEmpty){
-      Set()
-    }
-    else if (regexes.isEmpty) {
-      val singleRegex = regexNodes.head.simplify().toRegex()
-      Set(singleRegex)
-    }
-    else {
-      Set(longest(regexes))
-    }
+    regexes
   }
 
   /*Randomization can be applied later
@@ -183,6 +189,10 @@ class NGramMultiRegex(val regexSearch: AbstractRegexSearch, filterRatio: Double 
 
 
 object RegexString {
+
+  def apply(positives: Set[String], search: AbstractRegexSearch):RegexGenerator={
+    new RegexSingleString(search, TagExperimentCodes.patternFilterRatio, TagExperimentCodes.topCount).addPositives(positives)
+  }
 
   def applyExact(positives: Set[String]): RegexGenerator = {
     new RegexSingleString(new SinglePositiveExact(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.topCount).addPositives(positives)

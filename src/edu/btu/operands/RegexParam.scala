@@ -53,14 +53,14 @@ class RegexParam extends Serializable {
   }
 
   def addRegex(regexNode: RegexNodeIndex): this.type = {
-    if(regexStack.isEmpty || !regexStack.top.equals(regexNode)) {
+    if (regexStack.isEmpty || !regexStack.top.equals(regexNode)) {
       regexStack = regexStack.push(regexNode)
     }
 
     this
   }
 
-  def addRegex(cell: Cell) : this.type = {
+  def addRegex(cell: Cell): this.type = {
 
     if (!regexStack.isEmpty && regexStack.top.equals(cell.source)) {
       regexStack = regexStack.push(cell.target)
@@ -85,9 +85,11 @@ class RegexParam extends Serializable {
   }
 
   def largestIndice(pair: (RegexNodeIndex, RegexNodeIndex)): RegexNodeIndex = {
-    if (pair._1.indice >= pair._2.indice) pair._1
+    if (pair._1.maxDex >= pair._2.maxDex) pair._1
     else pair._2
   }
+
+  /*
 
   def constructRegexNode(): RegexNodeIndex = {
 
@@ -145,19 +147,133 @@ class RegexParam extends Serializable {
       mainNode = combineByOrder(mainNode.updateMaxIndice(), orNode)
     }
 
+
+    mainNode.simplify()
+
+  }
+*/
+
+  def combine(opt: RegexNodeIndex, crr: RegexNodeIndex, seq: Seq[RegexNodeIndex]): (RegexNodeIndex, Seq[RegexNodeIndex]) = {
+    if (crr != null && !seq.isEmpty && crr.getMaxDex() < seq.head.getMinDex() && opt.getMaxDex() < crr.getMaxDex()) {
+      (null, opt +: crr +: seq)
+    }
+    else if (crr != null && seq.isEmpty && opt.getMaxDex() < crr.getMaxDex()) {
+      (null, opt +: crr +: seq)
+    }
+    else
+      (crr, opt +: seq)
+  }
+
+  def constructRegexNode(): RegexNodeIndex = {
+
+    var mainNode = RegexNodeIndex(0, RegexOp("seq"), Seq())
+
+
+    var regexSrcOpt = Seq[RegexNodeIndex]()
+    var regexTrtOpt = Seq[RegexNodeIndex]()
+
+    var srcOpt: RegexNodeIndex = null;
+    var trtOpt: RegexNodeIndex = null;
+    var crrStk: RegexNodeIndex = null;
+
+
+    while (!sourceOptional.isEmpty || !targetOptional.isEmpty) {
+
+      if (crrStk == null && !regexStack.isEmpty) {
+        val pp = regexStack.pop2
+        crrStk = pp._1
+        regexStack = pp._2
+      }
+
+      if (!sourceOptional.isEmpty && !targetOptional.isEmpty) {
+        val s = sourceOptional.pop2
+        srcOpt = s._1
+        sourceOptional = s._2
+
+        val t = targetOptional.pop2
+        trtOpt = t._1
+        targetOptional = t._2
+
+        val spair = combine(srcOpt, crrStk, regexSrcOpt)
+        val tpair = combine(trtOpt, crrStk, regexTrtOpt)
+        crrStk = if (spair._1 == null || tpair._1 == null) null else crrStk
+        regexSrcOpt = spair._2
+        regexTrtOpt = tpair._2
+      }
+      else if (!sourceOptional.isEmpty) {
+        val s = sourceOptional.pop2
+        srcOpt = s._1;
+        sourceOptional = s._2
+        val spair = combine(srcOpt, crrStk, regexSrcOpt)
+        crrStk = spair._1
+        regexSrcOpt = spair._2
+      }
+      else if (!targetOptional.isEmpty) {
+        val t = targetOptional.pop2
+        trtOpt = t._1;
+        targetOptional = t._2
+
+        val tpair = combine(trtOpt, crrStk, regexTrtOpt)
+        regexTrtOpt = tpair._2
+        crrStk = tpair._1
+      }
+    }
+
+    if (regexSrcOpt.isEmpty && !regexTrtOpt.isEmpty) {
+      //indice comparison
+      mainNode = combineByOrder(mainNode, RegexNodeIndex(0, RegexOp(Regexify.optional), regexTrtOpt))
+    }
+    else if (regexTrtOpt.isEmpty && !regexSrcOpt.isEmpty) {
+      //indice comparison
+      mainNode = combineByOrder(mainNode, RegexNodeIndex(0, RegexOp(Regexify.optional), regexSrcOpt))
+    }
+    else if (!regexSrcOpt.isEmpty && !regexTrtOpt.isEmpty) {
+      val srcNode = RegexNodeIndex(0, RegexOp(Regexify.seq), regexSrcOpt).updateMaxIndice()
+      val dstNode = RegexNodeIndex(0, RegexOp(Regexify.seq), regexTrtOpt).updateMaxIndice()
+      val orNode = RegexNodeIndex(0, RegexOp(Regexify.or), Seq(srcNode, dstNode)).updateMinMaxIndice()
+      mainNode = combineByOrder(mainNode.updateMinMaxIndice(), orNode)
+
+    }
+
+
+    if (crrStk != null) {
+      regexStack = regexStack.push(crrStk)
+    }
+    while (!regexStack.isEmpty) {
+      val pp = regexStack.pop2
+      crrStk = pp._1
+      regexStack = pp._2
+      mainNode = mainNode.updateMinMaxIndice().addOrder(crrStk)
+    }
+
+
+    //mainNode = combineByOrder(mainNode.updateMinMaxIndice())
+    regexStack = Stack()
+
     mainNode.simplify()
 
   }
 
 
-  def combineByOrder(mainNode:RegexNodeIndex, newNode:RegexNodeIndex) : RegexNodeIndex = {
+  def combineByOrder(mainNode: RegexNodeIndex, newNode: RegexNodeIndex): RegexNodeIndex = {
 
-    if(mainNode.indice > newNode.indice) {
+    if (mainNode.maxDex > newNode.maxDex) {
       newNode.combineNode(mainNode)
     }
-    else{
+    else {
       mainNode.combineNode(newNode)
     }
+  }
+
+  def combineByOrder(newNode: RegexNodeIndex): RegexNodeIndex = {
+
+    val mainNode = newNode
+    while (!regexStack.isEmpty) {
+      val (crrNode, nStack) = regexStack.pop2
+      regexStack = nStack
+      mainNode.addRecursive(crrNode)
+    }
+    mainNode
   }
 
 
@@ -212,12 +328,12 @@ class RegexParam extends Serializable {
     (if (regexTrtOpt.isEmpty && regexSrcOpt.isEmpty) regexStr
     else if (regexSrcOpt.isEmpty) "(" + regexTrtOpt + "?)" + regexStr
     else if (regexTrtOpt.isEmpty) "(" + regexSrcOpt + "?)" + regexStr
-    else if(regexStr.isEmpty) "(" + regexSrcOpt + "|" + regexTrtOpt + ")"
+    else if (regexStr.isEmpty) "(" + regexSrcOpt + "|" + regexTrtOpt + ")"
     else "(" + regexSrcOpt + "|" + regexTrtOpt + "?)" + regexStr)
 
   }
 
-  def randomRegex(seed:Int): String = {
+  def randomRegex(seed: Int): String = {
     val rnd = new Random(seed)
     var regexStr = regexStack.reverse.map(node => node.getRndValue(rnd)).mkString("")
 
@@ -269,7 +385,7 @@ class RegexParam extends Serializable {
     (if (regexTrtOpt.isEmpty && regexSrcOpt.isEmpty) regexStr
     else if (regexSrcOpt.isEmpty) "(" + regexTrtOpt + "?)" + regexStr
     else if (regexTrtOpt.isEmpty) "(" + regexSrcOpt + "?)" + regexStr
-    else if(regexStr.isEmpty) "(" + regexSrcOpt + "|" + regexTrtOpt + ")"
+    else if (regexStr.isEmpty) "(" + regexSrcOpt + "|" + regexTrtOpt + ")"
     else "(" + regexSrcOpt + "|" + regexTrtOpt + "?)" + regexStr)
 
   }
@@ -281,7 +397,7 @@ class RegexParam extends Serializable {
 
   def randomRegex(): Seq[String] = {
     var seeds = Seq(17, 29, 37, 1017)
-    seeds.map(seed=> mainRegex + randomRegex(seed))
+    seeds.map(seed => mainRegex + randomRegex(seed))
 
   }
 

@@ -4,14 +4,20 @@ import scala.util.Random
 import scala.util.control.Breaks
 
 
-case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[RegexNodeIndex] = Seq()) extends Serializable {
+case class RegexNodeIndex(var maxDex: Int, var regexOp: RegexOp, var elems: Seq[RegexNodeIndex] = Seq()) extends Serializable {
 
   var matchTxt = ""
   var matchValue = ""
   var matchGroup = ""
-  var index = 0
+  var sindex = 0
+  var minDex = 0
 
   regexOp.setContainer(this)
+
+  def contains(regexNodeIndex: RegexNodeIndex):Boolean={
+    if(elems.isEmpty) false
+    else elems.exists(p=> p.equalsByRegex(regexNodeIndex))
+  }
 
   def symMatchGroup():String={
     Regexify.specialize(matchGroup)
@@ -36,16 +42,43 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
 
   def getMaxIndice():Int = {
     if(!elems.isEmpty) {
-      elems.maxBy(_.indice)
-        .indice
+      elems.maxBy(_.updateMaxIndice().getMaxDex())
+        .maxDex
     }
     else{
-      indice
+      maxDex
+    }
+  }
+  def getMinIndice():Int = {
+    if(!elems.isEmpty) {
+      elems.minBy(_.updateMinIndice().getMinDex())
+        .minDex
+    }
+    else{
+      minDex
     }
   }
 
+  def getMinDex(): Int ={
+    if(elems.isEmpty) maxDex
+    else minDex
+  }
+
+  def getMaxDex():Int={
+    maxDex
+  }
+
+  def updateMinMaxIndice():this.type ={
+    updateMaxIndice()
+    updateMinIndice()
+  }
+
   def updateMaxIndice():this.type ={
-    indice = getMaxIndice()
+    maxDex = getMaxIndice()
+    this
+  }
+  def updateMinIndice():this.type ={
+    minDex = getMinIndice()
     this
   }
 
@@ -85,22 +118,22 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
     else if(isOr()){
       val source = elems.head
       val target = if(elems.length > 2) {
-        RegexNodeIndex(index, regexOp, elems.tail)
+        RegexNodeIndex(sindex, regexOp, elems.tail)
       }
       else {
         elems.last
       }
-      Cell(source.index, target.index, source, target)
+      Cell(source.sindex, target.sindex, source, target)
     }
     else{
-      Cell(index, index, this, this)
+      Cell(sindex, sindex, this, this)
     }
   }
 
 
-  def canEqual(that: Any): Boolean = canEqualMain(that) && that.asInstanceOf[RegexNodeIndex].indice == indice
+  def canEqual(that: Any): Boolean = canEqualMain(that) && that.asInstanceOf[RegexNodeIndex].maxDex == maxDex
 
-  def canMatch(that: Any): Boolean = canMatchMain(that) && that.asInstanceOf[RegexNodeIndex].indice == indice
+  def canMatch(that: Any): Boolean = canMatchMain(that) && that.asInstanceOf[RegexNodeIndex].maxDex == maxDex
 
   def isOr(): Boolean = {
     Regexify.or.equals(regexOp.name) || Regexify.orgroup.equals(regexOp.name) || Regexify.orBracket.equals(regexOp.name) || Regexify.bracketCount.equals(regexOp.name)
@@ -117,13 +150,13 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
   def readyNode():RegexNodeIndex={
     if(isSeq()) this
     else {
-      Regexify.toSeqNode(indice).add(this)
+      Regexify.toSeqNode(maxDex).add(this)
     }
   }
 
 
   def combineNode(regexNodeIndex: RegexNodeIndex):RegexNodeIndex={
-    readyNode().add(regexNodeIndex)
+    readyNode().addOrder(regexNodeIndex)
   }
 
   //buggy here
@@ -227,12 +260,43 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
 
 
   def copy(): RegexNodeIndex = {
-    RegexNodeIndex(indice, regexOp.copy(), elems.map(rnode => rnode.copy()))
+    RegexNodeIndex(maxDex, regexOp.copy(), elems.map(rnode => rnode.copy()))
       .setMatchGroup(matchGroup).setMatchTxt(matchTxt).setMatchValue(matchValue)
   }
 
   def add(regexNode: RegexNodeIndex): this.type = {
     elems :+= regexNode
+    this
+  }
+  //recursively
+  def addRecursive(regexNodeIndex: RegexNodeIndex):RegexNodeIndex={
+    if(!elems.isEmpty && getMinDex() >= regexNodeIndex.getMaxDex()) {
+      elems = regexNodeIndex +: elems
+      this
+    }
+    else if(!elems.isEmpty && getMaxDex() < regexNodeIndex.getMinDex()){
+      elems = elems :+ regexNodeIndex
+      this
+    }
+    else if(!elems.isEmpty && getMaxDex() > regexNodeIndex.getMaxDex() && isSeq()){
+      addOrder(regexNodeIndex)
+    }
+    else if (!elems.isEmpty && isOr())   {
+      elems.foreach(elemNode=> {
+        elemNode.addRecursive(regexNodeIndex)
+      })
+
+      this
+    }
+    else this
+
+  }
+  def addOrder(regexNode: RegexNodeIndex): this.type = {
+    val pres = elems.takeWhile(p => p.maxDex < regexNode.maxDex)
+    lazy val ress = elems.takeWhile(p => p.maxDex > regexNode.maxDex)
+    if(pres.isEmpty) elems = regexNode +:elems
+    else if(ress.isEmpty) elems = elems :+ regexNode
+    else  elems = (pres :+ regexNode) ++ ress
     this
   }
 
@@ -321,11 +385,11 @@ case class RegexNodeIndex(var indice: Int, var regexOp: RegexOp, var elems: Seq[
 
 object RegexNode {
   def or(a: RegexNodeIndex, b: RegexNodeIndex): RegexNodeIndex = {
-    if (a.canMatch(b)) RegexNodeIndex(a.indice, RegexOp(Regexify.seq))
+    if (a.canMatch(b)) RegexNodeIndex(a.maxDex, RegexOp(Regexify.seq))
       .setMatchGroup(a.matchGroup)
       .setMatchTxt(a.matchTxt)
       .setMatchValue(a.matchValue)
-    else RegexNodeIndex(a.indice, RegexOp(Regexify.or), Seq(a, b))
+    else RegexNodeIndex(a.maxDex, RegexOp(Regexify.or), Seq(a, b))
       .regexify()
   }
 }

@@ -3,7 +3,7 @@ package edu.btu.search
 import edu.btu.operands.RegexNodeIndex
 import edu.btu.task.tagmatch.TagExperimentCodes
 
-class NGramFilter(var acceptRatio:Double) extends Serializable {
+class NGramFilter(var patternFilterRatio:Double) extends Serializable {
   //the regex must fill in the blanks
   //multiple regular expressions
   //generate most common expressions as n-gram dictionary
@@ -29,8 +29,8 @@ class NGramFilter(var acceptRatio:Double) extends Serializable {
     this
   }
 
-  def setAcceptRatio(ratio:Double):this.type={
-    this.acceptRatio = ratio;
+  def setPatternFilterRatio(ratio:Double):this.type={
+    this.patternFilterRatio = ratio;
     this
   }
 
@@ -54,7 +54,7 @@ class NGramFilter(var acceptRatio:Double) extends Serializable {
   def accept(item: String): Boolean = {
     val slices = ngrams(item)
     val ratio = slices.map(slice=> freqDictionary.getOrElse(slice, 0)).sum.toDouble / slices.size
-    ratio > acceptRatio
+    ratio > patternFilterRatio
   }
 
   //create ngrams from positive or negative samples

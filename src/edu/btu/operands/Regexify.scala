@@ -152,7 +152,7 @@ object Regexify {
 
     val elems = mainNode.elems;
     //mainNode.regexOp.matchTxt, null,
-    var nRegexNodeIndex = RegexNodeIndex(mainNode.indice, RegexOp(Regexify.seq), Seq())
+    var nRegexNodeIndex = RegexNodeIndex(mainNode.maxDex, RegexOp(Regexify.seq), Seq())
       .setMatchTxt(mainNode.matchTxt);
 
     var i = 0

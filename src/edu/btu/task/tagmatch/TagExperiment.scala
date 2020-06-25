@@ -35,7 +35,7 @@ case class EvaluationResult() {
   def summary(): this.type = {
     val foldCount = foldResults.size
     System.out.println(s"Total number of experiments: ${count}")
-    System.out.println(s"Total number of folds: ${foldCount}")
+    if(foldCount>0) System.out.println(s"Total number of folds: ${foldCount}")
     System.out.println(s"Total averages")
 
     print("True-Positives", tpCount)
@@ -121,15 +121,23 @@ object TagExperimentCodes {
   val samplesFromFilename = "FILENAME-SAMPLES"
 
   var k = 3
-  var maxPaths = 3
+  //number of search paths increase for better accuracy
+  var maxPaths = 200
+  //combine maximum 3 regexes
+  var maxCombineSize = 10
+  //max repeat random size
+  var maxRandomSampleSize = 40
+  //shuffle
+  var shuffleSeed = 1711
 
   //number of training samples per domain
   //for better accuracy increase it
   //for better efficiency decrease it
-  var maxSamples = 50
+  var maxSamples = 100
   //ratio of regex patterns constructed by training samples that match the given sample
   //used to filter accepted patterns
-  var acceptRatio = 0.9
+  //low ratio increase the number of patterns while decreases the efficiency
+  var regexMatchRatio = 0.05
 
   //the ratio of common n-gram dictionary patterns for the sample
   //accept or reject the positive or negative sample pattern for n-grams
@@ -138,7 +146,7 @@ object TagExperimentCodes {
 
   //increase it for better accuracy
   //decrease it for better efficiency
-  var topCount = 10
+  var topCount = 20
   var ngramLength = 7
   var ngramStepLength = 1
 
@@ -148,11 +156,15 @@ object TagExperimentCodes {
   var experimentCycle = Array[String](singleExact, regexMulti)
 
   //Filter generators
-  val allMapFilename = "resources/binary/regexGen.bin"
+  val allMapFilename = "resources/binary/regexGen"
   val allSamplesFilename = "resources/binary/samples.bin"
 
-  def mapBinaryExists(): Boolean = {
-    new File(allMapFilename).exists()
+  def mapFilename(id:Int):String={
+    allMapFilename+s"${id}.bin"
+  }
+
+  def mapBinaryExists(id:Int): Boolean = {
+    new File(mapFilename(id)).exists()
   }
 
   def samplesBinaryExists(): Boolean = {
@@ -161,10 +173,12 @@ object TagExperimentCodes {
 
   def loadSamples(samples: => Seq[TagSample]): Seq[TagSample] = {
     if (samplesBinaryExists()) {
+      println("")
       loadObject[Seq[TagSample]](allSamplesFilename)
     }
     else {
-      samples
+      saveSamples(samples)
+
     }
   }
 
@@ -172,19 +186,13 @@ object TagExperimentCodes {
     saveObject[Seq[TagSample]](allSamplesFilename, samples)
   }
 
-  def save(regexGenMap: Array[(String, Seq[RegexGenerator])]): Unit = {
-    val objout = new ObjectOutputStream(new FileOutputStream(allMapFilename))
-    objout.writeObject(regexGenMap)
-    objout.close()
+  def saveGenerator(regexGenMap: Array[(String, Seq[RegexGenerator])], id:Int): Array[(String, Seq[RegexGenerator])] = {
+    saveObject[Array[(String, Seq[RegexGenerator])]](mapFilename(id), regexGenMap)
   }
 
-  def load(): Array[(String, Seq[RegexGenerator])] = {
-    if (!new File(allMapFilename).exists()) return null
-
-    val objin = new ObjectInputStream(new FileInputStream(allMapFilename))
-    val array = objin.readObject().asInstanceOf[Array[(String, Seq[RegexGenerator])]]
-    objin.close()
-    array
+  def loadGenerator(regexGenMap: => Array[(String, Seq[RegexGenerator])], id:Int): Array[(String, Seq[RegexGenerator])] = {
+    if(mapBinaryExists(id)) loadObject[Array[(String, Seq[RegexGenerator])]](mapFilename(id))
+    else saveObject(mapFilename(id), regexGenMap)
   }
 
   def loadObject[A](filename: String): A = {
@@ -203,7 +211,7 @@ object TagExperimentCodes {
   }
 
 
-  def filterGenerator(regexGenMap: Array[(String, Seq[RegexGenerator])]): Array[(String, Seq[RegexGenerator])] = {
+  def filterGenerator(regexGenMap: => Array[(String, Seq[RegexGenerator])]): Array[(String, Seq[RegexGenerator])] = {
 
     println("Filter generators...")
     regexGenMap.foreach { case (_, generators) => {
@@ -219,7 +227,7 @@ object TagExperimentCodes {
 
   }
 
-  def combineGenerator(mapping: Array[(String, Seq[RegexGenerator])]): Array[(String, Seq[RegexGenerator])] = {
+  def combineGenerator(mapping: => Array[(String, Seq[RegexGenerator])]): Array[(String, Seq[RegexGenerator])] = {
 
     println("Combining generators...")
 
@@ -240,7 +248,7 @@ object TagExperimentCodes {
 
   }
 
-  def regexGenerator(training: Set[TagSample]): Map[String, Seq[RegexGenerator]] = {
+  def regexGenerator(training: => Set[TagSample]): Map[String, Seq[RegexGenerator]] = {
 
     if (experimentCycle.contains(singleExact) && experimentCycle.contains(regexSingle)) {
 
@@ -417,7 +425,7 @@ class TagExperiment {
 
   //build from train and test cases
   //construct
-  def buildSamples(trainTest: => TrainTest): this.type = {
+  def buildSamples(trainTest: => TrainTest): TrainTest = {
 
     println(s"Building samples for train-test")
     val crrTrainFileMap = trainTest.train.groupBy(_.filename)
@@ -444,7 +452,7 @@ class TagExperiment {
     trainTest.testingByDomain = crrTestDomainMap.keys.map(domain => domain -> trainingSamplesByDomain(domain, crrTestDomainFileMap, crrTestFileMap)).toMap
 
     println("Building finished...")
-    this
+    trainTest
   }
 
   def trainingSamplesByFilename(filename: String, crrFileSample: Map[String, Seq[TagSample]]): Seq[TagSample] = {
@@ -658,20 +666,20 @@ class TagExperiment {
     TimeBox.measureTime[EvaluationResult](name, evaluateMatch(name, positives, negatives, testingSet))
   }
 
-  def evaluate(trainTest: => TrainTest): this.type = {
+  def evaluate(trainTest: => TrainTest, foldNum:Int): this.type = {
     println(s"Evaluating training dataset")
 
-    evaluate(trainTest.train.toSet, trainTest.test.toSet)
+    evaluate(trainTest.train.toSet, trainTest.test.toSet, foldNum)
     this
   }
 
 
-  def evaluate(trainingSet: => Set[TagSample], testingSet: => Set[TagSample]): this.type = {
+  def evaluate(trainingSet: => Set[TagSample], testingSet: => Set[TagSample], foldNum:Int): this.type = {
 
 
-    var regexGenMap = TagExperimentCodes.regexGenerator(trainingSet).toArray
-    regexGenMap = TagExperimentCodes.combineGenerator(regexGenMap)
-    regexGenMap = TagExperimentCodes.filterGenerator(regexGenMap)
+    lazy val regexGenMap0 = TagExperimentCodes.regexGenerator(trainingSet).toArray
+    lazy val regexGenMap1 = TagExperimentCodes.combineGenerator(regexGenMap0)
+    lazy val regexGenMap = TagExperimentCodes.loadGenerator(TagExperimentCodes.filterGenerator(regexGenMap1), foldNum)
 
     //val regexTest = regexGenMap.head._2.head.generate()
 
@@ -702,23 +710,18 @@ class TagExperiment {
     val mainsamples = TagExperimentCodes.loadSamples(readCSVFolder(folder).allsamples)
     val trainTestSeq = crossvalidate(TagExperimentCodes.k, mainsamples, TagExperimentCodes.maxSamples)
 
-    trainTestSeq.foreach { trainTest => {
-      buildSamples(trainTest)
-    }
-    }
-
-    for (p <- 0 until TagExperimentCodes.k) {
-      val trainTest = trainTestSeq(p)
-      evaluate(trainTest)
-    }
+    trainTestSeq.zipWithIndex.foreach { case(trainTest, foldNum) => {
+      lazy val ntt = buildSamples(trainTest)
+      evaluate(ntt, foldNum)
+    }}
 
     evaluationResult
   }
 
-  def crossvalidate(k: Int, allSamples: => Seq[TagSample], maxSize: Int = 5): Seq[TrainTest] = {
+  def crossvalidate(k: Int, thisSamples: Seq[TagSample], maxSize: Int = 5): Seq[TrainTest] = {
     var main = Seq[TrainTest]()
 
-    allsamples.groupBy(_.domain).foreach {
+    thisSamples.groupBy(_.domain).foreach {
       case (domain, samples) => {
         val positives = samples.filter(!_.isNegative).take(maxSize)
         val negatives = samples.filter(_.isNegative).take(maxSize)
