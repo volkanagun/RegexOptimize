@@ -47,7 +47,6 @@ object TagMain {
   def apply(tagName: String, properties: Seq[(String, String)]): TagMain = {
     new TagMain(tagName, properties)
   }
-
   /*def apply(imgStr: String): TagMain = {
     TagParser(imgStr).toTagMain()
 

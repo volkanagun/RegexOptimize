@@ -14,12 +14,47 @@ class RegexParam extends Serializable {
   var targetContinue: String = ""
   var count: Int = 0
   var mainRegex = ""
+  var crrDirection = "equal"
+  var preDirection = ""
+
 
   var sourceOptional = Stack[RegexNodeIndex]()
   var targetOptional = Stack[RegexNodeIndex]()
+  var lastElems = Stack[RegexNodeIndex]()
   var regexStack = Stack[RegexNodeIndex]()
 
   var prevCell: Cell = null
+  var changeCount = 0;
+
+
+  //summarize nodes when direction re-change
+  def summarize(): Boolean = {
+    if (changeCount == 3 || crrDirection == "finish") {
+      val newRegexNode = createRegexNode()
+      regexStack = regexStack.push(newRegexNode)
+      changeCount = 0
+      true
+    }
+    else false
+  }
+
+  def summarizePass(): Boolean = {
+    val newRegexNode = createRegexNode()
+    regexStack = regexStack.push(newRegexNode)
+    changeCount = 0
+    true
+
+  }
+
+  def newDirection(direction: String): Boolean = {
+    if (!crrDirection.equals(direction)) {
+      crrDirection = direction
+      changeCount += 1
+      true
+
+    }
+    else false
+  }
 
 
   private def stackTop(optionalStack: Stack[RegexNodeIndex], regexNode: RegexNodeIndex): (Stack[RegexNodeIndex], RegexNodeIndex) = {
@@ -62,7 +97,10 @@ class RegexParam extends Serializable {
 
   def addRegex(cell: Cell): this.type = {
 
-    if (!regexStack.isEmpty && regexStack.top.equals(cell.source)) {
+    if (lastElems.contains(cell.source) || lastElems.contains(cell.target)) {
+      //skip add
+    }
+    else if (!regexStack.isEmpty && regexStack.top.equals(cell.source)) {
       regexStack = regexStack.push(cell.target)
     }
     else if (!regexStack.isEmpty && regexStack.top.equals(cell.target)) {
@@ -70,6 +108,19 @@ class RegexParam extends Serializable {
     }
     else {
       regexStack = regexStack.push(cell.largestIndice())
+    }
+
+    this
+  }
+
+  def removeRegex(cell: Cell): this.type = {
+    if (!regexStack.isEmpty) {
+      if (regexStack.top.equals(cell.source)) {
+        regexStack = regexStack.pop
+      }
+      else if (regexStack.top.equals(cell.target)) {
+        regexStack = regexStack.pop
+      }
     }
 
     this
@@ -164,10 +215,61 @@ class RegexParam extends Serializable {
       (crr, opt +: seq)
   }
 
+  def addElements(stack: Stack[RegexNodeIndex]): this.type = {
+    if (!stack.isEmpty) lastElems = lastElems.push(stack.top)
+    this
+  }
+
+  def createRegexNode(): RegexNodeIndex = {
+
+    val sourceOrElems = sourceOptional.reverse
+    val targetOrElems = targetOptional.reverse
+    addElements(sourceOptional)
+    addElements(targetOptional)
+
+    sourceOptional = Stack()
+    targetOptional = Stack()
+    val mainNode = RegexNodeIndex(0, RegexOp("seq"), regexStack.reverse).updateMinMaxIndice()
+    regexStack = Stack()
+
+
+    if (sourceOrElems.isEmpty && targetOrElems.isEmpty) {
+
+      mainNode
+
+    }
+    else if (sourceOrElems.isEmpty && !targetOrElems.isEmpty) {
+
+      val index = targetOrElems.toArray.head.maxDex
+      val mainOptNode = Regexify.toOptNode(index, targetOrElems)
+      combineByOrder(mainNode, mainOptNode)
+
+    }
+    else if (!sourceOrElems.isEmpty && targetOrElems.isEmpty) {
+
+      val index = sourceOrElems.toArray.head.maxDex
+      val mainOptNode = Regexify.toOptNode(index, sourceOrElems)
+      combineByOrder(mainNode, mainOptNode)
+
+    }
+    else {
+
+      val srcindex = sourceOrElems.head.maxDex
+      val trtindex = targetOrElems.head.maxDex
+      val index = math.min(srcindex, trtindex)
+
+      val sourceNode = Regexify.toSeqNode(srcindex, sourceOrElems)
+      val targetNode = Regexify.toSeqNode(trtindex, targetOrElems)
+      val mainOrNode = Regexify.toOrNode(index, Seq(sourceNode, targetNode)).updateMinMaxIndice()
+
+      combineByOrder(mainNode, mainOrNode)
+    }
+
+  }
+
   def constructRegexNode(): RegexNodeIndex = {
 
     var mainNode = RegexNodeIndex(0, RegexOp("seq"), Seq())
-
 
     var regexSrcOpt = Seq[RegexNodeIndex]()
     var regexTrtOpt = Seq[RegexNodeIndex]()
@@ -220,19 +322,17 @@ class RegexParam extends Serializable {
     }
 
     if (regexSrcOpt.isEmpty && !regexTrtOpt.isEmpty) {
-      //indice comparison
-      mainNode = combineByOrder(mainNode, RegexNodeIndex(0, RegexOp(Regexify.optional), regexTrtOpt))
+      mainNode = combineByOrder(mainNode, RegexNodeIndex(0, RegexOp(Regexify.optional), regexTrtOpt) /*.setNegate(doNegate)*/)
     }
     else if (regexTrtOpt.isEmpty && !regexSrcOpt.isEmpty) {
-      //indice comparison
       mainNode = combineByOrder(mainNode, RegexNodeIndex(0, RegexOp(Regexify.optional), regexSrcOpt))
     }
     else if (!regexSrcOpt.isEmpty && !regexTrtOpt.isEmpty) {
       val srcNode = RegexNodeIndex(0, RegexOp(Regexify.seq), regexSrcOpt).updateMaxIndice()
-      val dstNode = RegexNodeIndex(0, RegexOp(Regexify.seq), regexTrtOpt).updateMaxIndice()
+      val dstNode = RegexNodeIndex(0, RegexOp(Regexify.seq), regexTrtOpt).updateMaxIndice() /*.setNegate(doNegate)*/
+
       val orNode = RegexNodeIndex(0, RegexOp(Regexify.or), Seq(srcNode, dstNode)).updateMinMaxIndice()
       mainNode = combineByOrder(mainNode.updateMinMaxIndice(), orNode)
-
     }
 
 
@@ -257,7 +357,7 @@ class RegexParam extends Serializable {
 
   def combineByOrder(mainNode: RegexNodeIndex, newNode: RegexNodeIndex): RegexNodeIndex = {
 
-    if (mainNode.maxDex > newNode.maxDex) {
+    if (mainNode.isTarget == newNode.isTarget && mainNode.maxDex > newNode.maxDex) {
       newNode.combineNode(mainNode)
     }
     else {
@@ -401,6 +501,14 @@ class RegexParam extends Serializable {
 
   }
 
+  def containsSource(regexNodeIndex: RegexNodeIndex): Boolean = {
+    (!sourceOptional.isEmpty && sourceOptional.top.equals(regexNodeIndex))
+  }
+
+  def containsTarget(regexNodeIndex: RegexNodeIndex): Boolean = {
+    (!targetOptional.isEmpty && targetOptional.top.equals(regexNodeIndex))
+  }
+
   def sourceTop(): RegexNodeIndex = {
     if (sourceOptional.isEmpty) null
     else sourceOptional.top
@@ -416,11 +524,40 @@ class RegexParam extends Serializable {
     this
   }
 
-  def regexRemove(regexNode: RegexNodeIndex): this.type = {
-    regexStack = removeTopEqual(regexStack, regexNode)
+  protected def regexRemove(regexNode: RegexNodeIndex): Boolean = {
+    val newStack = removeTopEqual(regexStack, regexNode)
+    val op = regexStack.size != newStack.size
+    regexStack = newStack
+    op
+  }
+
+  protected def regexTransfer(stack: Stack[RegexNodeIndex], regexNode: RegexNodeIndex): Stack[RegexNodeIndex] = {
+    if (regexRemove(regexNode)) {
+      stack.push(regexNode)
+    }
+    else {
+      stack
+    }
+  }
+
+  def regexTransfer(regexNode: RegexNodeIndex): this.type = {
+    if (regexRemove(regexNode)) {
+      sourceTop(regexNode)
+      targetTop(regexNode)
+
+    }
     this
   }
 
+  def sourceTransfer(regexNodeIndex: RegexNodeIndex): this.type = {
+    sourceOptional = regexTransfer(sourceOptional, regexNodeIndex)
+    this
+  }
+
+  def targetTransfer(regexNodeIndex: RegexNodeIndex): this.type = {
+    targetOptional = regexTransfer(targetOptional, regexNodeIndex)
+    this
+  }
 
   def targetTop(): RegexNodeIndex = {
     if (targetOptional.isEmpty) null

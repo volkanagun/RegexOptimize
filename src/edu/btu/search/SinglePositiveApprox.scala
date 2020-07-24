@@ -1,17 +1,17 @@
 package edu.btu.search
 
+import edu.btu.task.evaluation.TimeBox
 import edu.btu.operands.{Cell, Path, RegexNode, RegexNodeIndex, Regexify}
-import edu.btu.task.tagmatch.TimeBox
 
 import scala.util.control.Breaks
 
 class SinglePositiveApprox extends AbstractRegexSearch() {
 
-  override def regexify(value: String): RegexNodeIndex = {
-    Regexify.continuousGrouping(value)
+  override def regexify(value: String): Seq[RegexNodeIndex] = {
+    Regexify.continousGrouping(value)
   }
 
-  def search():Seq[Matrix] = {
+  /*def search():Seq[Matrix] = {
 
     val positiveZip1 = positives.zipWithIndex
     val positiveZip2 = positives.zipWithIndex
@@ -90,6 +90,10 @@ class SinglePositiveApprox extends AbstractRegexSearch() {
     }
 
     Seq(Matrix(Seq(), Seq(), contents))
+  }*/
+
+  override def randomize(regexes: Set[String]): Set[String] = {
+    regexes.flatMap(regex=> Regexify.toRandom(regex))
   }
 
   override def searchDirectional(): Seq[Path] = {

@@ -23,18 +23,57 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
     this
   }
 
+  def setConditionalNegative(negative: Boolean): this.type = {
+    if (!this.negative) this.negative = negative
+    this
+  }
+
+
   def getNegative(): Boolean = {
     negative
   }
 
-  def simplify() : this.type = {
+  def simplify(): this.type = {
     cells = cells.map(_.simplify())
     this
+  }
+
+  def searchCost(cell: Cell): Double = {
+    val sourceNode = cell.source
+    val targetNode = cell.target
+
+    if (hasLastCell()) {
+      val lastCell = getLastCell()
+
+      if (lastCell.directional(cell) && sourceNode.equalsByValue(targetNode)) 0.0
+      else if (lastCell.directional(cell) && sourceNode.equalsByGroup(targetNode)) 1.0
+      else if (lastCell.directional(cell) && sourceNode.matchesByGroup(targetNode)) 2.0
+      else if (lastCell.directional(cell)) 3.0
+      else 4.0
+
+    }
+    else if (sourceNode.equalsByValue(targetNode)) 0.0
+    else if (sourceNode.equalsByGroup(targetNode)) 1.0
+    else if (sourceNode.matchesByGroup(targetNode)) 2.0
+    else 3.0
+
   }
 
   def addCell(cell: Cell, blockCost: Double): this.type = {
     cells :+= cell.simplify()
     cost += blockCost
+    this
+  }
+
+  def addCellUpdateCost(cell: Cell): this.type = {
+    val blockCost = searchCost(cell)
+    cells :+= cell.simplify()
+    cost += blockCost
+    this
+  }
+
+  def addCellUpdateCost(cells: Seq[Cell]): this.type = {
+    cells.foreach(cell => addCellUpdateCost(cell))
     this
   }
 
@@ -75,6 +114,7 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
     cells.last
   }
 
+
   override def toString(): String = {
     cells.mkString("\n")
   }
@@ -98,11 +138,115 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
     }
   }
 
+  def contains(cell: Cell): Boolean = {
+    cells.contains(cell)
+  }
+
+  def addCell(sequence: Set[Path], cell: Cell): Set[Path] = {
+    sequence.map(crrPath => crrPath.copy().addCell(cell, cell.cost))
+  }
+
+  def addCell(sequence: Set[Path], cells: Set[Cell]): Set[Path] = {
+    cells.flatMap(cell => addCell(sequence, cell))
+  }
+
+  def addCellBlock(sequence: Set[Path], cells: Seq[Cell]): Set[Path] = {
+    sequence.map(path => path.addCellUpdateCost(cells))
+  }
+
+  def swap(): this.type = {
+    this.cells = cells.map(cell => cell.swap())
+    this
+  }
+
   //rank by consuming order
   //separate
 
 
-  def negativePath(negative: Path): Path = {
+  //combine this path with a negative one
+  //with minimum effort
+  //algorithm??
+  def negativePath(negative: Path): Set[Path] = {
+
+    val minSize = math.min(negative.cells.length, cells.length)
+    var newPath = Set[Path](Path())
+    var i = 0
+    var found = false
+
+    while (i < minSize && !found) {
+
+      val negCell = negative.cells(i).regexify()
+      val crrCell = cells(i).copy().regexify()
+
+      //create target negative cases
+      //create negative nodes
+      //lose path order
+      //should create new paths instead for all negative combinations
+      val negatedCells = crrCell.negativeCombinations(negCell)
+        .map(cell => (cell, cell.negateTarget()))
+        .filter(_._2).map(_._1).toSet
+
+      if (negatedCells.isEmpty) {
+        newPath = addCell(newPath, crrCell)
+      }
+      else {
+
+        //negative path
+        //for each negated cell create a new path
+        newPath = addCell(newPath, crrCell)
+        newPath = addCell(newPath, negatedCells)
+        found = true
+      }
+
+      i += 1
+
+    }
+
+    if (i < cells.length)
+      addCellBlock(newPath, cells.slice(i, cells.length)).map(_.setConditionalNegative(found)) //.negativeSummarization())
+    else
+      newPath.map(_.setConditionalNegative(found)) //.map(_.negativeSummarization())
+  }
+
+
+  //negative combine by order
+  //h -> !0 h-> !1 h-> a
+  def negativeSummarization(): Path = {
+    //combine negative and positive cases in destination to negativeOR node
+
+    var iindex = 0
+    var ncells = Seq[Cell]()
+    while (iindex < cells.length - 1) {
+
+      val crrCell = cells(iindex)
+      var cont = 0
+      var jindex = iindex + 1
+
+      while (jindex < cells.length && crrCell.equalsBySourceValue(cells(jindex))) {
+        jindex += 1
+        cont += 1
+      }
+
+      if (cont > 0) {
+        val newTargetNodexindex = RegexNodeIndex.combineOrNegate(cells.slice(iindex, jindex).map(_.target))
+        ncells :+= Cell(crrCell.i, crrCell.j, crrCell.source, newTargetNodexindex)
+      }
+      else {
+        ncells :+= crrCell
+      }
+
+      iindex = jindex
+    }
+
+    if (iindex < cells.length) ncells = ncells :+ cells(iindex)
+
+    cells = ncells
+    this
+  }
+
+
+  //combine a positive path with a negative path by combination
+  def combineNegativePath(negative: Path): Path = {
 
     val minSize = math.min(negative.cells.length, cells.length)
     val newPath = Path()
@@ -114,14 +258,17 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
       val negCell = negative.cells(i).regexify()
       val crrCell = cells(i).copy().regexify()
 
+      //create target negative combinations
       val nodes = crrCell.negativeCombinations(negCell)
-        .map(cell=> (cell, cell.negativeSelf()))
-        .filter(_._2).map{_._1.source}
+        .map(cell => (cell, cell.negateTarget()))
+        .filter(_._2).map {
+        _._1.source
+      }
 
-      if(nodes.isEmpty){
+      if (nodes.isEmpty) {
         newPath.addCell(crrCell, crrCell.cost)
       }
-      else{
+      else {
         val cells = Regexify.searchPositives(nodes)
         newPath.addCell(cells)
         found = true
@@ -140,7 +287,6 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
   }
 
 
-
   def toOrRegex(): RegexParam = {
     toOrRegex(cells, new RegexParam())
   }
@@ -153,26 +299,107 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
     val prevCell = newParam.prevCell
 
     //need order between appends for reconstruction
-    if ( /*crrCell.isCross() && */ crrCell.isEqualWithoutIndex()) {
-      newParam.addRegex(crrCell)
+    if (crrCell.isEqualWithoutIndex()) {
+
       newParam.sourceRemove(crrCell.source)
       newParam.targetRemove(crrCell.target)
-      //newParam.mainRegex += newParam.constructRegex()
+
+      if (newParam.newDirection("equal")) {
+        newParam.summarizePass()
+      }
+
+      if (newParam.containsSource(crrCell.source) || newParam.containsTarget(crrCell.target)) {
+        newParam.sourceTop(crrCell.source)
+        newParam.targetTop(crrCell.target)
+      }
+      else {
+        newParam.addRegex(crrCell)
+      }
+
     }
     else if (prevCell == null) {
+
       newParam.sourceTop(crrCell.source)
       newParam.targetTop(crrCell.target)
+
     }
-    else if (prevCell.directional(crrCell) && crrCell.isDown()) {
+    else if (crrCell.isCross(prevCell)) {
+
+
+      if (newParam.newDirection("cross")) newParam.summarizePass()
+
+      newParam.regexTransfer(crrCell.target)
+      newParam.regexTransfer(crrCell.source)
+
       newParam.sourceTop(crrCell.source)
-    }
-    else if (prevCell.directional(crrCell) && crrCell.isRight()) {
       newParam.targetTop(crrCell.target)
+
     }
-    else if (crrCell.isCross()) {
+    else if (prevCell.directional(crrCell) && crrCell.isDown(prevCell)) {
+
+      newParam.newDirection("down")
+      newParam.summarize()
+
+      newParam.regexTransfer(crrCell.target)
       newParam.sourceTop(crrCell.source)
-      newParam.targetTop(crrCell.target)
+
+
     }
+    else if (prevCell.directional(crrCell) && crrCell.isRight(prevCell)) {
+
+      newParam.newDirection("right")
+      newParam.summarize()
+      newParam.regexTransfer(crrCell.source)
+      newParam.targetTop(crrCell.target)
+
+    }
+
+
+    if (!nextCells.isEmpty) {
+      toOrRegex(nextCells, newParam.setPrevCell(crrCell))
+    }
+    else {
+      newParam.newDirection("finish")
+      newParam.summarize()
+      newParam
+    }
+
+  }
+
+  private def createOrderedRegex(cells: Seq[Cell], newParam: RegexParam): RegexParam = {
+
+    val crrCell = cells.head
+    val nextCells = cells.tail
+    val prevCell = newParam.prevCell
+    val dchange =
+
+
+      if (crrCell.isEqualWithoutIndex()) {
+        newParam.addRegex(crrCell)
+        newParam.sourceRemove(crrCell.source)
+        newParam.targetRemove(crrCell.target)
+
+      }
+      else if (prevCell == null) {
+        newParam.sourceTop(crrCell.source)
+        newParam.targetTop(crrCell.target)
+      }
+      else if (prevCell.directional(crrCell) && crrCell.isDown()) {
+        newParam.sourceTop(crrCell.source)
+        //newParam.addRegex(crrCell.target)
+        //newParam.regexRemove(crrCell.source)
+      }
+      else if (prevCell.directional(crrCell) && crrCell.isRight()) {
+
+        newParam.targetTop(crrCell.target)
+        //newParam.addRegex(crrCell.source)
+        //newParam.regexRemove(crrCell.target)
+      }
+      else if (crrCell.isCross()) {
+        //newParam.removeRegex(crrCell)
+        newParam.sourceTop(crrCell.source)
+        newParam.targetTop(crrCell.target)
+      }
 
     if (!nextCells.isEmpty) {
       toOrRegex(nextCells, newParam.setPrevCell(crrCell))
@@ -568,11 +795,12 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
       if (size == cells.length) {
         return cells.zip(ins.cells).forall { case (cell1, cell2) => {
           cell1.equals(cell2)
-        }}
+        }
+        }
       }
       false
     }
-    else{
+    else {
       false;
     }
   }

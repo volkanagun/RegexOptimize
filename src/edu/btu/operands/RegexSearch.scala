@@ -11,9 +11,10 @@ import scala.util.control.Breaks
 ////////////////////////////////////////////
 class RegexSearch() extends AbstractRegexSearch() {
 
-  override def search(): Seq[Matrix] = null
 
-  override def regexify(value: String): RegexNodeIndex = null
+  override def randomize(regexes: Set[String]): Set[String] = regexes
+
+  override def regexify(value: String): Seq[RegexNodeIndex] = null
 
 
   //go cross while going right
@@ -21,8 +22,6 @@ class RegexSearch() extends AbstractRegexSearch() {
 
   //go cross while going down
   //go down while going down
-
-
   override def searchDirectional(): Seq[Path] = ???
 
   override def searchNegative(): Seq[Path] = ???

@@ -14,44 +14,60 @@ class TagSample(override val tagName: String, override val properties: Seq[(Stri
 
   var psMap = properties.map { case (k, v) => k -> ngramFilter.clean(v) }.toMap
 
-  def matchWithPositive(regexMap: Map[String, Set[String]], defaultValue: Boolean = true): Boolean = {
-    var count = 0
+  def regexBinCount(regex:String, propertyValue:String):Double ={
+    val sz = regex.r.findAllIn(propertyValue).size
+    if(sz >= 2) 2.0
+    else if(sz >= 1) 1.0
+    else 0.0
+  }
+
+  //positive training average to decide
+  def matchWithPositive(regexMap: Map[String, Set[String]], defaultValue: Boolean = true): Double = {
+    var count = 0.0
     var size = 0
 
     regexMap.foreach { case (item, regexSet) => {
-      val propertyValue = psMap.getOrElse(item, "")
-      count += regexSet.map(regex => regex.r.findAllIn(propertyValue).size).sum
-      size += 1
+      if(psMap.contains(item)) {
+        val propertyValue = psMap(item)
+        count += regexSet.map(regex => regexBinCount(regex, propertyValue)).sum
+      }
+      size += regexSet.size
     }}
 
-    (count.toDouble / size) > 0.0
-
+    val result = (count / size)
+    result
   }
 
   //should not match any of negative
-  def matchWithNegative(regexPositive: Map[String, Set[String]], regexNegative: Map[String, Set[String]], defaultValue: Boolean = true): Boolean = {
+  def matchWithNegative(regexPositive: Map[String, Set[String]], regexNegative: Map[String, Set[String]], defaultValue: Boolean = true): (Double, Double) = {
 
-    var count = 0
-    var nocount = 0
-    var size = 0
-    var nosize = 0
+    var count = 1
+    var nocount = 1
+    var size = 1
+    var nosize = 1
+
+
 
     regexPositive.foreach { case (item, regexSet) => {
-      val propertyValue = psMap.getOrElse(item, "")
-      count += regexSet.map(regex => regex.r.findAllIn(propertyValue).size).sum
-      size += 1
+      if(psMap.contains(item)) {
+        val propertyValue = psMap(item)
+        count += regexSet.map(regex => regex.r.findAllIn(propertyValue).size).sum
+      }
+      size += regexSet.size
     }}
 
     regexNegative.foreach { case (item, regexSet) => {
-      val propertyValue = psMap.getOrElse(item, "")
-      nocount += regexSet.map(regex => regex.r.findAllIn(propertyValue).size).sum
-      nosize += 1
+      if(psMap.contains(item)) {
+        val propertyValue = psMap(item)
+        nocount += regexSet.map(regex => regex.r.findAllIn(propertyValue).size).sum
+      }
+      nosize += regexSet.size
     }}
 
-    val yesmatch = count.toDouble/size > 0.0
-    val nomatch = nocount.toDouble/nosize > 0.0
+    val yesmatch = count.toDouble/size + 1E-13
+    val nomatch = nocount.toDouble/nosize + 1E-13
 
-    yesmatch && !nomatch
+    (yesmatch, nomatch)
   }
 
   def setNegative(): this.type = {

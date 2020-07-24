@@ -1,7 +1,8 @@
 package edu.btu.operands
 
+import edu.btu.task.evaluation.{ExperimentParams, TimeBox}
 import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveExact, NGramFilter, SinglePositiveApprox, SinglePositiveExact}
-import edu.btu.task.tagmatch.{TagExperimentCodes, TimeBox}
+
 
 import scala.util.Random
 
@@ -14,48 +15,34 @@ class RegexSingleString(val regexSearch: AbstractRegexSearch, val ratio: Double 
   def generateTimely(): Set[String] = {
     System.out.println("Generating single-regex...")
     System.out.println(s"Number of samples :${positives.size}...")
-    val set = TimeBox.measureTime[Set[String]]("Regex-Single", generate())
+    val set = TimeBox.measureTime[Set[String]]("generating-regex-single", generate())
     filterTimely(set)
   }
 
   def filterTimely(set: Set[String]): Set[String] = {
-    TimeBox.measureTime[Set[String]]("Regex-Single-Filter", filter(set))
+    TimeBox.measureTime[Set[String]]("filtering-regex-single", filter(set))
   }
 
-  def combineBy(seq:Seq[RegexNodeIndex], size:Int, id:Int) :RegexNodeIndex={
-    //take several combine if not have it
-    var mainNode = Regexify.toOrNode(0)
-    val shuffle = new Random((TagExperimentCodes.shuffleSeed+id)).shuffle(seq).take(size)
-    shuffle.foreach(rnode=> if(!mainNode.contains(rnode)) mainNode = mainNode.combineOrNode(rnode))
-    mainNode
-  }
 
-  def combine(seq:Seq[RegexNodeIndex], size:Int, repeat:Int = 3):Seq[RegexNodeIndex]={
-    var fseq = Seq[RegexNodeIndex]()
-    for(k<-0 until repeat){
-      fseq :+= combineBy(seq, size, k)
-    }
-
-    fseq
-  }
 
   def generate(): Set[String] = {
 
     val paths = regexSearch.addPositive(positives)
+      .sizeControl()
       .searchDirectional()
       .sortBy(_.cost)
       .toArray
-      .take(TagExperimentCodes.maxPaths)
+      .take(ExperimentParams.maxPaths)
 
     val regexNodes = paths.map(crrPath => {
       crrPath.toOrRegex().constructRegexNode()
     })
 
 
-    val elems = combine(regexNodes, TagExperimentCodes.maxCombineSize, TagExperimentCodes.maxRandomSampleSize)
-    val regexes = elems.map(nodeIndex => nodeIndex.toRegex()).toSet
+    val elems = combine(regexNodes, ExperimentParams.maxCombineSize, ExperimentParams.maxRandomSampleSize)
+    val regexes = elems.map(nodeIndex => nodeIndex.toRegex())
 
-    regexes
+    regexSearch.randomize(regexes)
   }
 
   /*Randomization can be applied later
@@ -82,108 +69,34 @@ class RegexMultiString(val regexSearch: AbstractRegexSearch, filterRatio: Double
 
   def generateTimely(): Set[String] = {
     System.out.println("Generating multi-regex...")
-    val set = TimeBox.measureTime[Set[String]]("Regex-Multi", generate())
+    val set = TimeBox.measureTime[Set[String]]("generating-regex-multi", generate())
     filterTimely(set)
   }
 
   def filterTimely(set: Set[String]): Set[String] = {
-    TimeBox.measureTime[Set[String]]("Regex-Multi", filter(set))
+    TimeBox.measureTime[Set[String]]("filtering-regex-multi", filter(set))
   }
 
   def generate(): Set[String] = {
 
-    val paths = regexSearch.addPositive(positives)
+    val regexes = regexSearch.addPositive(positives)
       .addNegative(negatives)
-      .searchDirectionalNegative()
-      .sortBy(_.cost)
-      .toArray
+      .sizeControl()
+      .searchNegativeRegex()
+      .toSet
 
-    val regexNodes = paths.map(crrPath => {
-      crrPath.toOrRegex().constructRegexNode()
-    }).distinct
 
-    val indices = for (x <- 0 until regexNodes.length; y <- 0 until regexNodes.length) yield (x, y)
-    val elems = indices.filter { case (x, y) => x != y }
-      .map { case (x, y) => (regexNodes(x).combineOrNode(regexNodes(y))) }
-    val regexes = elems.map(nodeIndex => nodeIndex.toRegex()).toSet
-
-    if (regexNodes.isEmpty){
-      Set()
-    }
-    else if (regexes.isEmpty) {
-      Set(regexNodes.head.toRegex())
-    }
-    else {
-      Set(regexes.head)
-    }
-  }
-
-  def filter(set: Set[String]): Set[String] = {
-    val posSet = filterMatch(set, positives)
-    val negSet = filterNotMatch(set, negatives)
-    posSet.intersect(negSet)
-  }
-}
-
-class NGramMultiRegex(val regexSearch: AbstractRegexSearch, filterRatio: Double = 0.0, count: Int = 20) extends RegexGenerator(filterRatio, count) {
-
-  def generateTimely(): Set[String] = {
-    System.out.println("Generating regex...")
-    val set = TimeBox.measureTime[Set[String]]("NGram-Multi", generate())
-    filterTimely(set)
-  }
-
-  override def generate(): Set[String] = {
-    val sumPositive = positiveFilter.freqDictionary.map(_._2).sum
-    val sumNegative = negativeFilter.freqDictionary.map(_._2).sum
-
-    val positiveCases = positiveFilter.freqDictionary.filter { case (_, count) => {
-      count.toDouble / sumPositive > 0.5
-    }
-    }.map(_._1).toSeq
-    val negativeCases = negativeFilter.freqDictionary.filter { case (_, count) => {
-      count.toDouble / sumNegative > 0.5
-    }
-    }.map(_._1).toSeq
-
-    val paths = regexSearch.addPositive(positiveCases)
-      .addNegative(negativeCases)
-      .searchDirectionalNegative()
-      .sortBy(_.cost)
-      .toArray
-
-    val regexNodes = paths.map(crrPath => {
-      crrPath.toOrRegex().constructRegexNode()
-    }).distinct
-
-    val indices = for (x <- 0 until regexNodes.length; y <- 0 until regexNodes.length) yield (x, y)
-    val elems = indices.filter { case (x, y) => x != y }
-      .map { case (x, y) => (regexNodes(x).combineOrNode(regexNodes(y))) }
-    val regexes = elems.map(nodeIndex => nodeIndex.toRegex()).toSet
-
-    if(regexNodes.isEmpty){
-      Set()
-    }
-    else if (regexes.isEmpty) {
-      Set(regexNodes.head.toRegex())
-    }
-    else {
-      Set(regexes.head)
-    }
     regexes
 
   }
 
-  def filterTimely(set: Set[String]): Set[String] = {
-    TimeBox.measureTime[Set[String]]("NGram-Multi", filter(set))
-  }
-
   def filter(set: Set[String]): Set[String] = {
     val posSet = filterMatch(set, positives)
     val negSet = filterNotMatch(set, negatives)
     posSet.intersect(negSet)
   }
 }
+
 
 
 
@@ -191,36 +104,42 @@ class NGramMultiRegex(val regexSearch: AbstractRegexSearch, filterRatio: Double 
 object RegexString {
 
   def apply(positives: Set[String], search: AbstractRegexSearch):RegexGenerator={
-    new RegexSingleString(search, TagExperimentCodes.patternFilterRatio, TagExperimentCodes.topCount).addPositives(positives)
+    new RegexSingleString(search, ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives)
+  }
+  def apply(positives: Set[String], negatives:Set[String], search: AbstractRegexSearch):RegexGenerator={
+    new RegexMultiString(search, ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives).addNegatives(negatives)
   }
 
   def applyExact(positives: Set[String]): RegexGenerator = {
-    new RegexSingleString(new SinglePositiveExact(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.topCount).addPositives(positives)
+    new RegexSingleString(new SinglePositiveExact(), ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives)
   }
 
   def applyExactAdaptive(positives: Set[String]): RegexGenerator = {
     if (positives.head.length > 20) {}
-    new RegexSingleString(new SinglePositiveExact(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.topCount).addPositives(positives)
+    new RegexSingleString(new SinglePositiveExact(), ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives)
   }
 
   def applyApproximate(positives: Set[String]): RegexGenerator = {
-    new RegexSingleString(new SinglePositiveApprox(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.topCount).addPositives(positives)
+    new RegexSingleString(new SinglePositiveApprox(), ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives)
   }
 
   def applyExact(positives: Set[String], negatives: Set[String]): RegexGenerator = {
-    new RegexMultiString(new MultiPositiveExact(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.topCount).addPositives(positives).addNegatives(negatives)
+    new RegexMultiString(new MultiPositiveExact(), ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives).addNegatives(negatives)
   }
 
   def applyApproximate(positives: Set[String], negatives: Set[String]): RegexGenerator = {
-    new RegexMultiString(new MultiPositiveApprox(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.topCount).addPositives(positives).addNegatives(negatives)
+    new RegexMultiString(new MultiPositiveApprox(), ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives).addNegatives(negatives)
   }
 
-  def applyExactNGram(positives: Set[String], negatives: Set[String]): RegexGenerator = {
-    new NGramMultiRegex(new MultiPositiveExact(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.topCount).addPositives(positives).addNegatives(negatives)
+  def applyNGram(positives: Set[String]): RegexGenerator = {
+    new NGramSinglePattern(ExperimentParams.patternFilterRatio, ExperimentParams.topCount)
+      .addPositives(positives)
   }
 
-  def applyApproximateNGram(positives: Set[String], negatives: Set[String]): RegexGenerator = {
-    new NGramMultiRegex(new MultiPositiveApprox(), TagExperimentCodes.patternFilterRatio, TagExperimentCodes.topCount).addPositives(positives).addNegatives(negatives)
+  def applyNGram(positives: Set[String], negatives: Set[String]): RegexGenerator = {
+    new NGramMultiPattern(ExperimentParams.patternFilterRatio, ExperimentParams.topCount)
+      .addPositives(positives)
+      .addNegatives(negatives)
   }
 
 }

@@ -3,18 +3,32 @@ package edu.btu.operands
 import edu.btu.search.Matrix
 
 
-case class Cell(i: Int, j: Int, var source: RegexNodeIndex = null, var target: RegexNodeIndex = null, var matching: Int = -1, var cost: Double = -1d) extends Serializable {
+case class Cell(var i: Int, var j: Int, var source: RegexNodeIndex = null, var target: RegexNodeIndex = null, var matching: Int = -1, var cost: Double = -1d) extends Serializable {
 
   var rowEnd = false;
   var colEnd = false;
   var isNegative = false;
+
+
+  if(target!=null) target.doTarget()
 
   def copy():Cell = {
     val cell = Cell(i, j, source.copy(), target.copy(), matching, cost)
     cell.rowEnd = rowEnd
     cell.colEnd = colEnd
     cell.isNegative = isNegative
+
     cell
+  }
+
+  def swap():this.type ={
+    var ii = i
+    i = j
+    j= i
+    var ss = source
+    source = target
+    target = ss
+    this
   }
 
   def simplify():Cell={
@@ -49,14 +63,34 @@ case class Cell(i: Int, j: Int, var source: RegexNodeIndex = null, var target: R
     else target
   }
 
+  def isDown(prevCell:Cell): Boolean = {
+    i > prevCell.i && j == prevCell.j
+  }
+
+  def isRight(prevCell:Cell): Boolean = {
+    j > prevCell.j && i== prevCell.i
+  }
+
+  def isCross(prevCell:Cell): Boolean = {
+    j > prevCell.j && i > prevCell.i
+  }
+
+  def isEqualCross(prevCell:Cell): Boolean = {
+    j >= prevCell.j && i >= prevCell.i && isEqualWithoutIndex()
+  }
+
+
+
   def isCross(): Boolean = {
     i == j
   }
 
 
+
   def isDown(): Boolean = {
     i >= j + 1
   }
+
 
 
   def isRight(): Boolean = {
@@ -79,21 +113,16 @@ case class Cell(i: Int, j: Int, var source: RegexNodeIndex = null, var target: R
     (isCross() && cell.isCross()) || (isDown() && cell.isDown()) || (isRight() && cell.isRight()) || (isCross() && (cell.isRight() || cell.isDown()))
   }
 
-  //remove or modify the negative cell from the current cell
+  //current is positive and cell is negative
+  //source should be positive, and target should be negative
+  //source should not contain anything from target
   def negativeCombinations(cell:Cell):Array[Cell] = {
-    if(equalSourceTarget() && cell.equalSourceTarget()) {
-      Array(Cell(source.maxDex, cell.source.maxDex,  source, cell.source))
-    }
-    else if(equalSourceTarget()) {
-      Array(Cell(source.maxDex, cell.source.maxDex,  source, cell.source), Cell(source.maxDex, cell.target.maxDex,  source, cell.target))
-    }
-    else if(cell.equalSourceTarget()) {
-      Array(Cell(source.maxDex, cell.source.maxDex, source, cell.source), Cell(target.maxDex, cell.source.maxDex, target, cell.source))
+    if(equalSourceTarget() || cell.equalSourceTarget()) {
+      Array(Cell(source.maxDex, cell.target.maxDex,  source, cell.target).setNegative())
     }
     else
     {
-      Array(Cell(source.maxDex,cell.source.maxDex, source,   cell.source),  Cell(source.maxDex, cell.target.maxDex, source, cell.target),
-        Cell(target.maxDex, cell.source.maxDex, target, cell.source), Cell(target.maxDex, cell.target.maxDex, target, cell.target))
+      Array(Cell(source.maxDex, cell.source.maxDex,  source, cell.source).setNegative(), Cell(source.maxDex, cell.target.maxDex,  source, cell.target).setNegative())
     }
   }
 
@@ -111,7 +140,7 @@ case class Cell(i: Int, j: Int, var source: RegexNodeIndex = null, var target: R
     source.negative(cell.source) || target.negative(cell.target) || source.negative(cell.target) || target.negative(cell.source)
   }
 
-  def negativeSelf():Boolean={
+  def negateTarget():Boolean={
     source.negative(target)
   }
 
@@ -214,8 +243,16 @@ case class Cell(i: Int, j: Int, var source: RegexNodeIndex = null, var target: R
     source.equalsByGroup(cell.source)
   }
 
+  def equalsBySourceValue(cell: Cell): Boolean = {
+    source.equalsByValue(cell.source)
+  }
+
   def equalsByTargetGroup(cell: Cell): Boolean = {
     target.equalsByGroup(cell.target)
+  }
+
+  def equalsByTargetValue(cell: Cell): Boolean = {
+    target.equalsByValue(cell.target)
   }
 
 

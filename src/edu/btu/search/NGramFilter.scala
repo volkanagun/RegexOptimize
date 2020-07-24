@@ -1,7 +1,8 @@
 package edu.btu.search
 
 import edu.btu.operands.RegexNodeIndex
-import edu.btu.task.tagmatch.TagExperimentCodes
+import edu.btu.task.evaluation.ExperimentParams
+
 
 class NGramFilter(var patternFilterRatio:Double) extends Serializable {
   //the regex must fill in the blanks
@@ -9,8 +10,8 @@ class NGramFilter(var patternFilterRatio:Double) extends Serializable {
   //generate most common expressions as n-gram dictionary
   //filter expressions by those common n-grams/ extract regex
   var freqDictionary = Map[String, Int]()
-  var stepSize = TagExperimentCodes.ngramStepLength;
-  var sliceSize = TagExperimentCodes.ngramLength;
+  var stepSize = ExperimentParams.ngramStepLength;
+  var sliceSize = ExperimentParams.ngramLength;
 
   var topCount = 50;
 
@@ -89,9 +90,13 @@ class NGramFilter(var patternFilterRatio:Double) extends Serializable {
     slice(filtered)
   }
 
+  def commonSet():Set[String]={
+    freqDictionary.toSeq.sortBy(_._2).reverse.map(_._1).take(topCount).toSet
+  }
+
 
 }
 
-object NGramFilter extends NGramFilter(TagExperimentCodes.patternFilterRatio){
+object NGramFilter extends NGramFilter(ExperimentParams.patternFilterRatio){
   def apply() = this
 }

@@ -1,7 +1,10 @@
 package edu.btu.operands
 
+import edu.btu.task.evaluation.{EvaluationResult, ExperimentParams}
 import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveExact, NGramFilter, SinglePositiveApprox, SinglePositiveExact}
-import edu.btu.task.tagmatch.TagExperimentCodes
+
+
+import scala.util.Random
 
 abstract class RegexGenerator(val patternFilterRatio: Double = 0.0, val topCount: Int = 20) extends Serializable {
 
@@ -15,22 +18,79 @@ abstract class RegexGenerator(val patternFilterRatio: Double = 0.0, val topCount
   var positiveFilter = new NGramFilter(patternFilterRatio).setTopCount(topCount)
   var negativeFilter = new NGramFilter(patternFilterRatio).setTopCount(topCount)
 
+  var trainingEval : EvaluationResult = EvaluationResult()
+
+  def setTrainingEval(trainEval:EvaluationResult):this.type ={
+    this.trainingEval = trainEval
+    this
+  }
+
   def addPositives(positives: Set[String]): this.type = {
     this.positives = this.positives ++ positives
-    this.positives = this.positiveFilter.count(this.positives).filter(this.positives)
+    this.positiveFilter.count(positives)
     this
   }
 
   def addNegatives(negatives: Set[String]): this.type = {
     this.negatives = this.negatives ++ negatives
-    this.negatives = this.negativeFilter.count(this.negatives).filter(this.negatives)
+    this.negativeFilter.count(negatives)
     this
   }
 
   def filterSlice(): this.type = {
-    this.negatives = this.negativeFilter.filterSlice(negatives)
-    this.positives = this.positiveFilter.filterSlice(positives)
+    this.negatives = this.negativeFilter.commonSet()
+    this.positives = this.positiveFilter.commonSet()
     this
+  }
+
+
+  protected def combineBy(seq:Seq[RegexNodeIndex], size:Int, id:Int) :RegexNodeIndex={
+    //take several combine if not have it
+    var mainNode = Regexify.toOrNode(0)
+    val shuffle = new Random().shuffle(seq).take(size)
+    shuffle.foreach(rnode=> if(!mainNode.contains(rnode)) mainNode = mainNode.combineOr(rnode))
+    //new elements are added update hashcode
+    mainNode.resetHash()
+  }
+
+  protected def combineBy(seq:Seq[RegexNodeIndex], size:Int, id:Int, doNegate:Boolean) :RegexNodeIndex={
+    //take several combine if not have it
+
+    var mainNode = Regexify.toOrNegateNode(0,Seq())
+    val shuffle = new Random().shuffle(seq).take(size)
+    shuffle.foreach(rnode=> if(!mainNode.contains(rnode)) mainNode = mainNode.combineOr(rnode))
+    //new elements are added update hashcode
+    mainNode.resetHash()
+  }
+
+  protected def combineBy(crrSet:Set[RegexNodeIndex], newSet:Set[RegexNodeIndex]) : this.type ={
+    newSet.foreach(newNode => crrSet.filter(crrNode=> !crrNode.contains(newNode))
+      .foreach(crrNode=> crrNode.combineOr(newNode)))
+    this
+  }
+
+  def combine(seq:Seq[RegexNodeIndex], size:Int, repeat:Int = 3):Set[RegexNodeIndex]={
+    var crrSet = Set[RegexNodeIndex]()
+    var newSet = seq.toSet
+
+    for(k<-0 until repeat){
+      crrSet  = crrSet + combineBy(seq, size, ExperimentParams.shuffleSeed + k)
+      combineBy(crrSet, newSet)
+    }
+
+    crrSet
+  }
+
+  def combineNegate(seq:Seq[RegexNodeIndex], size:Int, repeat:Int = 3):Set[RegexNodeIndex]={
+    var crrSet = Set[RegexNodeIndex]()
+    var newSet = seq.toSet
+
+    for(k<-0 until repeat){
+      crrSet  = crrSet + combineBy(seq, size, ExperimentParams.shuffleSeed + k, true)
+      combineBy(crrSet, newSet)
+    }
+
+    crrSet
   }
 
   def isEmpty() = positives.isEmpty
@@ -39,18 +99,46 @@ abstract class RegexGenerator(val patternFilterRatio: Double = 0.0, val topCount
     regexes.toSeq.map(str => (str, str.length)).sortBy(_._2).reverse.head._1
   }
 
+  def evalMatch(pcount:Set[(String, Int)],rsize:Int, psize:Int): Unit ={
+
+    val countSum =pcount.map(_._2).sum.toDouble
+    trainingEval.incRatio("positive-size", psize.toDouble)
+    trainingEval.incRatio("positive-ratio", countSum/rsize)
+  }
+
+  def evalNotMatch(ncount:Set[(String, Int)], rsize:Int, psize:Int): Unit ={
+
+    val countSum =ncount.map(_._2).sum.toDouble
+
+    trainingEval.incRatio("negative-size",psize.toDouble)
+    trainingEval.incRatio("negative-ratio", countSum/rsize)
+
+  }
+
+  def trainingSummary():this.type ={
+    trainingEval.trainingSummary()
+    this
+  }
+
+  //compute tp/fp/tn/fn for each regex
   def filterMatch(regexSet:Set[String], trainingSamples:Set[String]):Set[String]={
     val counts = regexSet.map(regex=> (regex, trainingSamples.count(value=> value.matches(regex))))
     val sum = trainingSamples.size
 
-    counts.filter{case(regex,cnt)=> cnt.toDouble/sum > TagExperimentCodes.regexMatchRatio}.map(_._1)
+    val fregexes = counts.filter{case(regex,cnt)=> cnt.toDouble/sum > ExperimentParams.regexMatchRatio}
+    evalMatch(fregexes,regexSet.size, trainingSamples.size)
+
+    fregexes.map(_._1)
   }
 
   def filterNotMatch(regexSet:Set[String], trainingSamples:Set[String]):Set[String] = {
     val counts = regexSet.map(regex=> (regex, trainingSamples.count(value=> !value.matches(regex))))
     val sum = trainingSamples.size
 
-    counts.filter{case(regex,cnt)=> cnt.toDouble/sum >  TagExperimentCodes.regexMatchRatio}.map(_._1)
+    val fregexes = counts.filter{case(regex,cnt)=> cnt.toDouble/sum >  ExperimentParams.regexMatchRatio}
+    evalNotMatch(fregexes,regexSet.size, trainingSamples.size)
+    fregexes.map(_._1)
+
   }
 
   //region Description
@@ -67,14 +155,6 @@ abstract class RegexGenerator(val patternFilterRatio: Double = 0.0, val topCount
     else null
   }
 
-  def test(sequences: Seq[String], regexSearch: AbstractRegexSearch, testIndex: Int): Unit = {
-
-    if (testIndex == 0) testRegular(sequences, regexSearch)
-    else if (testIndex == 1) testZigzag(sequences, regexSearch)
-    else if (testIndex == 2) testEfficient(sequences, regexSearch)
-    else if (testIndex == 3) testOrEfficient(sequences, regexSearch)
-
-  }
 
   def test(positives: Seq[String], negatives: Seq[String], regexSearch: AbstractRegexSearch, testIndex: Int): Unit = {
     if (testIndex == 3) testOrEfficient(positives, negatives, regexSearch)
@@ -95,7 +175,7 @@ abstract class RegexGenerator(val patternFilterRatio: Double = 0.0, val topCount
   }
 
 
-  def testRegular(sequences: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
+  /*def testRegular(sequences: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
     val matrices = regexSearch.addPositive(sequences).search()
 
     val paths = regexSearch.searchZigZagLoop(matrices, 10)
@@ -108,10 +188,10 @@ abstract class RegexGenerator(val patternFilterRatio: Double = 0.0, val topCount
     }).distinct
 
     matchTest(regexes, sequences)
-  }
+  }*/
 
 
-  def testEfficient(sequences: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
+  /*def testEfficient(sequences: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
     val matrices = regexSearch.addPositive(sequences).search()
     val paths = regexSearch.search(matrices).flatten
       .sortBy(_.cost)
@@ -122,7 +202,7 @@ abstract class RegexGenerator(val patternFilterRatio: Double = 0.0, val topCount
     }).distinct
 
     matchTest(regexes, sequences)
-  }
+  }*/
 
   def testOrEfficient(sequences: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
 
@@ -132,23 +212,15 @@ abstract class RegexGenerator(val patternFilterRatio: Double = 0.0, val topCount
   }
 
   def testOrEfficient(positives: Seq[String], negatives: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
-    val paths = regexSearch
-      .addPositive(positives)
-      .addNegative(negatives)
-      .searchDirectionalNegative()
-      .sortBy(_.cost)
-      .toArray
 
-    val regexes = paths.map(crrPath => {
-      crrPath.toOrRegex().updateRegex()
-    }).distinct
+    val regexes = RegexString.apply(positives.toSet, negatives.toSet, regexSearch).generate().toSeq
 
     matchTest(regexes, positives)
     matchTest(regexes, negatives, false)
   }
 
 
-  def testZigzag(sequences: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
+  /*def testZigzag(sequences: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
     val matrices = regexSearch.addPositive(sequences).search()
     val paths = regexSearch.searchZigZagLoop(matrices, 10)
 
@@ -158,7 +230,7 @@ abstract class RegexGenerator(val patternFilterRatio: Double = 0.0, val topCount
 
     matchTest(regexes, sequences)
 
-  }
+  }*/
 
 
   def matchTest(regexes: Seq[String], sequences: Seq[String], positiveMatch: Boolean = true): Unit = {

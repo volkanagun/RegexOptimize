@@ -1,5 +1,4 @@
-package edu.btu.operands
-import edu.btu.search.{AbstractRegexSearch, MultiPositiveExact}
+package edu.btu.task.evaluation
 
 import scala.util.Random
 
@@ -144,13 +143,13 @@ object RegexEvaluate {
     labelResult
   }
 
-  def approach(sequence:Seq[(String,Boolean)], extractType:Int) : Seq[String] = {
+  /*def approach(sequence:Seq[(String,Boolean)], extractType:Int) : Seq[String] = {
     val regexes = if(extractType == 0) approach0(sequence)
     else if(extractType == 1) {Seq()}
     else if(extractType == 2) {Seq()}
     else {Seq()}
     regexes
-  }
+  }*/
 
   /**
    * Binary merge matrix of all
@@ -159,7 +158,7 @@ object RegexEvaluate {
    * @param seq
    */
 
-  def approach0(seq: Seq[(String, Boolean)]): Seq[String] = {
+  /*def approach0(seq: Seq[(String, Boolean)]): Seq[String] = {
 
     val positiveCases = seq.filter(_._2).map(_._1)
     val negativeCases = seq.filter(!_._2).map(_._1)
@@ -183,42 +182,15 @@ object RegexEvaluate {
     })
 
     positiveFilter.intersect(negativeFilter)
-  }
-
-  ///////////////////////////////////////////////////////////////
-  //Binary merge matrix for positive cases with grouping
-  ///////////////////////////////////////////////////////////////
-  def approach1(seq: Seq[(String, Boolean)]): Seq[String]={
-    null
-  }
-
-  ////////////////////////////////////////////////////////////
-  //Binary merge matrix for positive and negative cases
-  ////////////////////////////////////////////////////////////
-  def approach2(seq: Seq[(String, Boolean)]): Seq[String]={
-    null
-  }
-
-  ////////////////////////////////////////////////////////////
-  //Multi score matrix for positive cases
-  ////////////////////////////////////////////////////////////
-  def approach3(seq: Seq[(String, Boolean)]): Seq[String]={
-    null
-  }
-
-  ////////////////////////////////////////////////////////////
-  //Multi score matrix for positive and negative cases
-  ////////////////////////////////////////////////////////////
-  def approach4(seq: Seq[(String, Boolean)]): Seq[String]={
-    null
-  }
+  }*/
 
 
-  def main(args: Array[String]): Unit = {
+
+ /* def main(args: Array[String]): Unit = {
     val dataset = PatternReader.readCSV(csvfolder, 0.001)
     val result = evaluate(dataset, approach, 5, 0)
     result.print()
-  }
+  }*/
 
 
 }
