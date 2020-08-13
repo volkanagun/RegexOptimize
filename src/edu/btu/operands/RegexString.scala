@@ -39,7 +39,7 @@ class RegexSingleString(val regexSearch: AbstractRegexSearch, val ratio: Double 
     })
 
 
-    val elems = combine(regexNodes, ExperimentParams.maxCombineSize, ExperimentParams.maxRandomSampleSize)
+    val elems = combine(regexNodes, ExperimentParams.maxCombineSize, ExperimentParams.maxRepeatCombineSize)
     val regexes = elems.map(nodeIndex => nodeIndex.toRegex())
 
     regexSearch.randomize(regexes)
@@ -85,7 +85,6 @@ class RegexMultiString(val regexSearch: AbstractRegexSearch, filterRatio: Double
       .searchNegativeRegex()
       .toSet
 
-
     regexes
 
   }
@@ -96,9 +95,6 @@ class RegexMultiString(val regexSearch: AbstractRegexSearch, filterRatio: Double
     posSet.intersect(negSet)
   }
 }
-
-
-
 
 
 object RegexString {

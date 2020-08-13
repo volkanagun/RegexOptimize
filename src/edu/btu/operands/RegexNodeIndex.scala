@@ -76,13 +76,15 @@ case class RegexNodeIndex(var maxDex: Int, var regexOp: RegexOp, var elems: Seq[
                                  (elems.slice(0, indice) :+ randomNode) ++ elems.slice(indice + 1, elems.length)
                                })) yield elemGroups
 
-      newElemGroups.flatMap(crrGroup => crrGroup.map(new RegexNodeIndex(maxDex, regexOp, _).updateRegex().resetHash()))
+      newElemGroups.flatMap(crrGroup => crrGroup.map(items => new RegexNodeIndex(maxDex, regexOp, items).updateRegex().resetHash()))
+
     }
     else if(isOr() && !isEmpty()){
       //continuous grouping
       Seq(Regexify.continousOrGrouping(this))
     }
     else {
+
       val newMatchValue = matchGroup
       val newMatchGroup = matchGroup
       val newTxt = matchTxt
@@ -93,6 +95,7 @@ case class RegexNodeIndex(var maxDex: Int, var regexOp: RegexOp, var elems: Seq[
         .resetHash()
 
       Seq(this, newNode)
+
     }
   }
 

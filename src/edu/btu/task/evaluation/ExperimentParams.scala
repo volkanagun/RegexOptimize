@@ -1,6 +1,6 @@
 package edu.btu.task.evaluation
 
-import java.io.{File, FileInputStream, FileOutputStream, ObjectInputStream, ObjectOutputStream, PrintWriter}
+import java.io._
 
 import edu.btu.operands.{RegexGenerator, RegexString}
 import edu.btu.task.tagmatch.TagSample
@@ -36,7 +36,7 @@ class ExperimentParams extends Serializable {
   //combine maximum 3 regexes
   var maxCombineSize = 7
   //max repeat random size
-  var maxRandomSampleSize = 5
+  var maxRepeatCombineSize = 5
   //shuffle seeds
   var shuffleSeed = 1711
   var shuffleSeed2 = 171178
@@ -44,23 +44,25 @@ class ExperimentParams extends Serializable {
   //number of training samples per domain
   //for better accuracy increase it
   //for better efficiency decrease it
-  var maxSamples = 15000
+  var maxSamples = 1000000
   //ratio of regex patterns constructed by training samples that match the given sample
   //used to filter accepted regex patterns
   //low ratio increase the number of regex patterns while decreases the efficiency
   //choose -1 for ngrams
-  var regexMatchRatio:Double = -1d
+  var matchSelectRatio: Double = 0.07d
 
   //the ratio of common n-gram dictionary patterns for the sample
   //accept or reject the positive or negative sample pattern for n-grams
   //increasing it will reduce the number of patterns
-  var patternFilterRatio:Double = 0.5
+  var patternFilterRatio: Double = 0.5
   //take n-gram samples count (top counted ngram patterns) (topCount)
 
   //increase it for better accuracy
   //decrease it for better efficiency
-  var topCount = 50
-  var ngramLength = 10
+  var topCount = 100
+  var ngramLength = 7
+  //number of generalized patterns
+  var rndElemLength = 4
   var ngramStepLength = 1
 
   var maxMultiDepth = 2
@@ -95,6 +97,7 @@ class ExperimentParams extends Serializable {
     r += 7 * experimentCycle.toSeq.hashCode()
     r += 7 * selectedDomains.hashCode()
     r += 7 * minimumPositiveSamples
+    r += 7 * rndElemLength
 
     r
 
@@ -104,7 +107,7 @@ class ExperimentParams extends Serializable {
 
     var r = 3
     r += 7 * maxCombineSize
-    r += 7 * maxRandomSampleSize
+    r += 7 * maxRepeatCombineSize
     r += 7 * maxPaths
     r += 7 * maxMultiDepth
     r += 7 * maxSamples
@@ -116,6 +119,7 @@ class ExperimentParams extends Serializable {
     r += 7 * experimentCycle.toSeq.hashCode()
     r += 7 * selectedDomains.hashCode()
     r += 7 * minimumPositiveSamples
+    r += 7 * rndElemLength
 
     r += 7 * (if (doNGramFilter) 1 else 0)
 
@@ -139,7 +143,7 @@ class ExperimentParams extends Serializable {
   }
 
   def loadXML(): this.type = {
-    if(!new File(paramsFilename).exists()) return this;
+    if (!new File(paramsFilename).exists()) return this;
     val xmlDoc = XML.load(paramsFilename)
     val elem = (xmlDoc \\ "PARAMETERS").head
     val params = elem \\ "PARAM"
@@ -147,7 +151,7 @@ class ExperimentParams extends Serializable {
       val attr = item.attribute("NAME").get.head.text
       val value = item.attribute("VALUE").get.head.text
       if (attr.equals("MAX_COMBINE_SIZE")) maxCombineSize = value.toInt
-      else if (attr.equals("MAX_RANDOM_SAMPLE_SIZE")) maxRandomSampleSize = value.toInt
+      else if (attr.equals("MAX_REPEAT_COMBINE_SIZE")) maxRepeatCombineSize = value.toInt
       else if (attr.equals("MAX_PATHS")) maxPaths = value.toInt
       else if (attr.equals("MAX_SAMPLES")) maxSamples = value.toInt
       else if (attr.equals("FOLD_SIZE")) k = value.toInt
@@ -156,12 +160,13 @@ class ExperimentParams extends Serializable {
       else if (attr.equals("MAX_MULTI_DEPTH")) maxMultiDepth = value.toInt
       else if (attr.equals("TOP_COUNT")) topCount = value.toInt
       else if (attr.equals("PATTERN_FILTER_RATIO")) patternFilterRatio = value.toDouble
-      else if (attr.equals("MATCH_SELECT_RATIO")) regexMatchRatio = value.toDouble
-      else if (attr.equals("EXPERIMENT_CYCLE")) experimentCycle = value.split("\\+\\+").filter(! _.isEmpty)
-      else if (attr.equals("SELECTED_DOMAINS")) selectedDomains = value.split("\\+\\+").filter(! _.isEmpty)
+      else if (attr.equals("MATCH_SELECT_RATIO")) matchSelectRatio = value.toDouble
+      else if (attr.equals("EXPERIMENT_CYCLE")) experimentCycle = value.split("\\+\\+").filter(!_.isEmpty)
+      else if (attr.equals("SELECTED_DOMAINS")) selectedDomains = value.split("\\+\\+").filter(!_.isEmpty)
       else if (attr.equals("NGRAM_FILTER")) doNGramFilter = value.toBoolean
       else if (attr.equals("DOMAIN_EXPERIMENT")) domainNotFile = value.toBoolean
       else if (attr.equals("MIN_POS_SAMPLES")) minimumPositiveSamples = value.toInt
+      else if (attr.equals("RND_GROUPING_SIZE")) rndElemLength = value.toInt
       else {}
 
     })
@@ -172,7 +177,7 @@ class ExperimentParams extends Serializable {
   def paramsXML(): String = {
     "<PARAMETERS>\n" +
       "<PARAM NAME=\"MAX_COMBINE_SIZE\" VALUE=\"" + maxCombineSize + "\"/>\n" +
-      "<PARAM NAME=\"MAX_RANDOM_SAMPLE_SIZE\" VALUE=\"" + maxRandomSampleSize + "\"/>\n" +
+      "<PARAM NAME=\"MAX_REPEAT_COMBINE_SIZE\" VALUE=\"" + maxRepeatCombineSize + "\"/>\n" +
       "<PARAM NAME=\"MAX_PATHS\" VALUE=\"" + maxPaths + "\"/>\n" +
       "<PARAM NAME=\"MAX_MULTI_DEPTH\" VALUE=\"" + maxMultiDepth + "\"/>\n" +
       "<PARAM NAME=\"MAX_SAMPLES\" VALUE=\"" + maxSamples + "\"/>\n" +
@@ -181,12 +186,13 @@ class ExperimentParams extends Serializable {
       "<PARAM NAME=\"NGRAM_STEP_LENGTH\" VALUE=\"" + ngramStepLength + "\"/>\n" +
       "<PARAM NAME=\"TOP_COUNT\" VALUE=\"" + topCount + "\"/>\n" +
       "<PARAM NAME=\"PATTERN_FILTER_RATIO\" VALUE=\"" + patternFilterRatio + "\"/>\n" +
-      "<PARAM NAME=\"MATCH_SELECT_RATIO\" VALUE=\"" + regexMatchRatio + "\"/>\n" +
+      "<PARAM NAME=\"MATCH_SELECT_RATIO\" VALUE=\"" + matchSelectRatio + "\"/>\n" +
       "<PARAM NAME=\"EXPERIMENT_CYCLE\" VALUE=\"" + experimentCycle.mkString("++") + "\"/>\n" +
       "<PARAM NAME=\"SELECTED_DOMAINS\" VALUE=\"" + selectedDomains.mkString("++") + "\"/>\n" +
       "<PARAM NAME=\"NGRAM_FILTER\" VALUE=\"" + doNGramFilter + "\"/>\n" +
       "<PARAM NAME=\"DOMAIN_EXPERIMENT\" VALUE=\"" + domainNotFile + "\"/>\n" +
       "<PARAM NAME=\"MIN_POS_SAMPLES\" VALUE=\"" + minimumPositiveSamples + "\"/>\n" +
+      "<PARAM NAME=\"RND_GROUPING_SIZE\" VALUE=\"" + rndElemLength + "\"/>\n" +
       "</PARAMETERS>"
   }
 
@@ -246,11 +252,10 @@ class ExperimentParams extends Serializable {
     println("Filter generators...")
     regexGenMap.foreach { case (_, generators) => {
       if (ExperimentParams.doNGramFilter) generators.map(generator => generator.filterSlice())
-    }
-    }
+    }}
 
     regexGenMap.map { case (name, generators) => {
-      val nonEmptyGens = generators.filter(regexGenerator => regexGenerator.positives.size >= 2)
+      val nonEmptyGens = generators.filter(regexGenerator => regexGenerator.filter())
       (name, nonEmptyGens)
     }
     }.filter(!_._2.isEmpty)
@@ -341,27 +346,29 @@ class ExperimentParams extends Serializable {
     else if (experimentCycle.contains(multiExact)) {
       val positiveSamples = training.filter(!_.isNegative)
       val negativeSamples = training.filter(_.isNegative)
-      val posMap = positiveSamples.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
-        .groupBy(_._1).mapValues(_.map(_._2))
-      val negMap = negativeSamples.flatMap(tg => tg.negativeRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
-        .groupBy(_._1).mapValues(_.map(_._2))
 
-      //generate two regexes for positive and negative
-      posMap.map { case (tag, positiveCases) => (tag, positiveCases, negMap.getOrElse(tag, Set())) }
-        .map { case (tag, pos, neg) => tag -> Seq(RegexString.applyExact(pos, neg), RegexString.applyExact(neg, pos)) }.toMap
+        val posMap = positiveSamples.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
+          .groupBy(_._1).mapValues(_.map(_._2))
+        val negMap = negativeSamples.flatMap(tg => tg.negativeRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
+          .groupBy(_._1).mapValues(_.map(_._2))
+
+        //generate two regexes for positive and negative
+        posMap.map { case (tag, positiveCases) => (tag, positiveCases, negMap.getOrElse(tag, Set())) }
+          .map { case (tag, pos, neg) => tag -> Seq(RegexString.applyExact(pos, neg), RegexString.applyExact(neg, pos)) }.toMap
 
     }
     else if (experimentCycle.contains(multiApprox)) {
       val positiveSamples = training.filter(!_.isNegative)
       val negativeSamples = training.filter(_.isNegative)
-      val positiveMap = positiveSamples.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
-        .groupBy(_._1).mapValues(_.map(_._2))
-      val negativeMap = negativeSamples.flatMap(tg => tg.negativeRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
-        .groupBy(_._1).mapValues(_.map(_._2))
 
-      //generate two regexes for positive and negative
-      positiveMap.map { case (tag, positiveCases) => (tag, positiveCases, negativeMap.getOrElse(tag, Set())) }
-        .map { case (tag, pos, neg) => tag -> Seq(RegexString.applyApproximate(pos, neg), RegexString.applyApproximate(neg, pos)) }.toMap
+
+        val positiveMap = positiveSamples.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
+          .groupBy(_._1).mapValues(_.map(_._2))
+        val negativeMap = negativeSamples.flatMap(tg => tg.negativeRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
+          .groupBy(_._1).mapValues(_.map(_._2))
+        //generate two regexes for positive and negative
+        positiveMap.map { case (tag, positiveCases) => (tag, positiveCases, negativeMap.getOrElse(tag, Set())) }
+          .map { case (tag, pos, neg) => tag -> Seq(RegexString.applyApproximate(pos, neg), RegexString.applyApproximate(neg, pos)) }.toMap
 
     }
 
@@ -397,6 +404,6 @@ class ExperimentParams extends Serializable {
 
 }
 
-object ExperimentParams extends ExperimentParams{
+object ExperimentParams extends ExperimentParams {
   def apply(): ExperimentParams = new ExperimentParams()
 }

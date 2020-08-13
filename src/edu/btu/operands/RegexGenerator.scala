@@ -10,6 +10,11 @@ abstract class RegexGenerator(val patternFilterRatio: Double = 0.0, val topCount
 
   def generateTimely(): Set[String]
 
+  def filter():Boolean={
+    (this.isInstanceOf[RegexSingleString] && positives.size >= 2 * ExperimentParams.k) ||
+      (this.isInstanceOf[RegexMultiString] && this.positives.size >= 2 * ExperimentParams.k && this.negatives.size >= 2 * ExperimentParams.k)
+  }
+
   def generate(): Set[String]
 
   var positives: Set[String] = Set()
@@ -125,7 +130,7 @@ abstract class RegexGenerator(val patternFilterRatio: Double = 0.0, val topCount
     val counts = regexSet.map(regex=> (regex, trainingSamples.count(value=> value.matches(regex))))
     val sum = trainingSamples.size
 
-    val fregexes = counts.filter{case(regex,cnt)=> cnt.toDouble/sum > ExperimentParams.regexMatchRatio}
+    val fregexes = counts.filter{case(regex,cnt)=> cnt.toDouble/sum >= ExperimentParams.matchSelectRatio}
     evalMatch(fregexes,regexSet.size, trainingSamples.size)
 
     fregexes.map(_._1)
@@ -135,7 +140,7 @@ abstract class RegexGenerator(val patternFilterRatio: Double = 0.0, val topCount
     val counts = regexSet.map(regex=> (regex, trainingSamples.count(value=> !value.matches(regex))))
     val sum = trainingSamples.size
 
-    val fregexes = counts.filter{case(regex,cnt)=> cnt.toDouble/sum >  ExperimentParams.regexMatchRatio}
+    val fregexes = counts.filter{case(regex,cnt)=> cnt.toDouble/sum >  ExperimentParams.matchSelectRatio}
     evalNotMatch(fregexes,regexSet.size, trainingSamples.size)
     fregexes.map(_._1)
 
@@ -205,10 +210,8 @@ abstract class RegexGenerator(val patternFilterRatio: Double = 0.0, val topCount
   }*/
 
   def testOrEfficient(sequences: Seq[String], regexSearch: AbstractRegexSearch): Unit = {
-
     val regexes = RegexString.apply(sequences.toSet, regexSearch).generate().toSeq
     matchTest(regexes, sequences)
-
   }
 
   def testOrEfficient(positives: Seq[String], negatives: Seq[String], regexSearch: AbstractRegexSearch): Unit = {

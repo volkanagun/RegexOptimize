@@ -445,8 +445,6 @@ abstract class AbstractRegexSearch() extends Serializable {
     val random = new Random(19)
     val minMax = math.max(regexNodes.length / 2, 1)
 
-
-
     val sourceIndices = Range(0, minMax)
       .map { index => random.nextInt(regexNodes.length) }
 

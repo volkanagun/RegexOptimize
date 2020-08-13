@@ -327,7 +327,7 @@ class TagExperiment {
   var fileSampleMap = Map[String, Seq[TagSample]]()
   var domainValidateMap = Map[String, TrainTest]()
 
-  def initParams():this.type ={
+  def initParams(): this.type = {
     ExperimentParams.loadXML().saveXML()
     this
   }
@@ -599,15 +599,15 @@ class TagExperiment {
     val avgPos = decideAverage._1
 
     val foundAverages = testingSet.map(sp => (sp, sp.matchWithNegative(positives, negatives)))
-    val foundPositiveMatches = foundAverages.filter{case(_, (pos, neg)) => pos >= avgPos || (pos > neg && neg < avgNeg)}.map(_._1)
-    val foundNegativeMatches = foundAverages.filter { case (_, (pos, neg)) => neg >= avgNeg || neg >= pos}.map(_._1) -- foundPositiveMatches
+    val foundPositiveMatches = foundAverages.filter { case (_, (pos, neg)) => pos >= avgPos || (pos > neg && neg < avgNeg) }.map(_._1)
+    val foundNegativeMatches = foundAverages.filter { case (_, (pos, neg)) => neg >= avgNeg || neg >= pos }.map(_._1) -- foundPositiveMatches
 
     val positiveResults = foundPositiveMatches -- foundNegativeMatches
     val negativeResults = foundNegativeMatches -- foundPositiveMatches
 
 
     //true positives
-    val tp = testingSet.filter(! _.isNegative).filter(positiveResults.contains(_))
+    val tp = testingSet.filter(!_.isNegative).filter(positiveResults.contains(_))
     val fp = testingSet.filter(_.isNegative).filter(positiveResults.contains(_))
 
     val tn = testingSet.filter(_.isNegative).filter(ts => negativeResults.contains(ts))
@@ -659,15 +659,14 @@ class TagExperiment {
   //create two averages from positives and negative examples
 
 
-
-  def average(sequence:Seq[(Double, Double)]):(Double, Double)={
+  def average(sequence: Seq[(Double, Double)]): (Double, Double) = {
     var p1 = 0.0;
     var p2 = 0.0;
-    sequence.foreach{case(i1, i2)=> p1+= i1/sequence.size; p2+=i2/sequence.size}
+    sequence.foreach { case (i1, i2) => p1 += i1 / sequence.size; p2 += i2 / sequence.size }
     (p1, p2)
   }
 
-  def trainingAverage(positiveSet: Set[TagSample], negativeSet: Set[TagSample], mapPositive: Map[String, Set[String]], mapNegative: Map[String, Set[String]]) : (Double, Double) = {
+  def trainingAverage(positiveSet: Set[TagSample], negativeSet: Set[TagSample], mapPositive: Map[String, Set[String]], mapNegative: Map[String, Set[String]]): (Double, Double) = {
     val avgPos = average(positiveSet.toSeq.map(tg => tg.matchWithNegative(mapPositive, mapNegative)))
     val avgNeg = average(negativeSet.toSeq.map(tg => tg.matchWithNegative(mapNegative, mapPositive)))
 
@@ -683,14 +682,11 @@ class TagExperiment {
 
     //val regexTest = regexGenMap.head._2.head.generate()
 
-
     val trainingMap = regexGenMap.map { case (name, regexGenerators) => {
 
-      val regexStrings = regexGenerators.map(_.generateTimely()).filter(!_.isEmpty)
+      val regexStrings = regexGenerators.map(gen=> gen.generateTimely()).filter(!_.isEmpty)
       (name -> regexStrings)
-
-    }
-    }.toMap.filter { case (name, set) => !set.isEmpty }
+    }}.toMap.filter { case (name, set) => !set.isEmpty }
 
     val eval = if (ExperimentParams.isSingle()) {
       val name = "evaluation-single-regex"
@@ -737,12 +733,18 @@ class TagExperiment {
     val domainsamples = if (ExperimentParams.selectedDomains.isEmpty) mainsamples.groupBy(_.domain)
     else mainsamples.groupBy(_.domain).filter { case (domainName, _) => ExperimentParams.selectedDomains.exists(selectedName => domainName.contains(selectedName)) }
 
-    val filtersamples = domainsamples.filter(_._2.filter(! _.isNegative).length >= ExperimentParams.minimumPositiveSamples)
+    val filtersamples = domainsamples.filter { case (name, seq) => {
+      val pp = seq.filter(_.isNegative)
+      val ss = seq.filter(!_.isNegative)
+      pp.length >= ExperimentParams.minimumPositiveSamples && ss.length >= ExperimentParams.k * 2
+    }}
 
     println(s"Number of domains: ${filtersamples.size}")
 
     evaluationResult = filtersamples.map {
+
       case (domainName, ccsamples) => {
+
         val trainTestSeq = crossvalidate(ExperimentParams.k, ccsamples, ExperimentParams.maxSamples)
         val mainEval = EvaluationResult()
 
@@ -769,7 +771,7 @@ class TagExperiment {
         val posDist = positives.length.toDouble / k
         val negDist = negatives.length.toDouble / k
 
-        if (posDist > 0) {
+        if (posDist >= 2) {
           main = crossUpdate(main, crossvalidateAll(k, positives))
           main = crossUpdate(main, crossvalidateAll(k, negatives))
         }

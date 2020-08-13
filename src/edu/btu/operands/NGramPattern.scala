@@ -24,7 +24,7 @@ class NGramSinglePattern(filterRatio: Double = 0.0, count: Int = 20) extends Reg
   def generateOrRegex(nominalCases:Seq[String], preOp:String = ""):Set[String]={
     var mainSet = Set[String]()
     var inputSet = nominalCases
-    for(i<-0 until ExperimentParams.maxRandomSampleSize){
+    for(i<-0 until ExperimentParams.maxRepeatCombineSize){
       var mainRegex = inputSet.head
       inputSet = inputSet.tail
       for(j<-0 until Math.min(ExperimentParams.maxCombineSize, inputSet.length)){
@@ -72,7 +72,7 @@ class NGramMultiPattern(filterRatio: Double = 0.0, count: Int = 20) extends Rege
     var mainSet = Set[String]()
     var inputSet = nominalCases
 
-    for(i<-0 until ExperimentParams.maxRandomSampleSize) {
+    for(i<-0 until ExperimentParams.maxRepeatCombineSize) {
 
       var mainRegex = inputSet.head
       inputSet = inputSet.tail

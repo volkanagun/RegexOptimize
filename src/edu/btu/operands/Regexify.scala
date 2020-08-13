@@ -3,6 +3,7 @@ package edu.btu.operands
 import java.util.regex.Pattern
 
 import edu.btu.search.SinglePositiveExact
+import edu.btu.task.evaluation.ExperimentParams
 
 import scala.util.Random
 import scala.util.control.Breaks
@@ -89,7 +90,6 @@ object Regexify {
     RegexNodeIndex(indice, RegexOp(Regexify.seq),elements)
   }
 
-
   def toOrExactRegex(source: RegexNodeIndex, target: RegexNodeIndex): String = {
     if (source.equalsByValue(target)) source.matchValue
     else source.matchValue + "|" + target.matchValue
@@ -160,18 +160,15 @@ object Regexify {
 
   def randomizedGrouping(sequence: String): Seq[RegexNodeIndex] = {
     val currentNode = continousGrouping(sequence).head
-    currentNode.randomize().map(_.continuous())
+    currentNode.randomize(ExperimentParams.rndElemLength).map(_.continuous())
   }
 
   def groupSimplify(regexNodeIndex: RegexNodeIndex): RegexNodeIndex = {
 
     if (regexNodeIndex.isEmpty()) {
-
       regexNodeIndex.matchValue = regexNodeIndex.matchGroup
-
     }
     else if (!regexNodeIndex.isEmpty()) {
-
       regexNodeIndex.elems.foreach(groupSimplify(_))
       regexNodeIndex.matchGroup = regexNodeIndex.matchGroup + s"{${regexNodeIndex.elems.length}}"
       regexNodeIndex.matchValue = regexNodeIndex.matchGroup
