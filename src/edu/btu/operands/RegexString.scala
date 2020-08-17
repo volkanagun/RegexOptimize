@@ -39,7 +39,7 @@ class RegexSingleString(val regexSearch: AbstractRegexSearch, val ratio: Double 
     })
 
 
-    val elems = combine(regexNodes, ExperimentParams.maxCombineSize, ExperimentParams.maxRepeatCombineSize)
+    val elems = combine(regexNodes, ExperimentParams.maxCombineSize, ExperimentParams.maxRegexSize)
     val regexes = elems.map(nodeIndex => nodeIndex.toRegex())
 
     regexSearch.randomize(regexes)

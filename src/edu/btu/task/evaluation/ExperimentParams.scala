@@ -36,7 +36,7 @@ class ExperimentParams extends Serializable {
   //combine maximum 3 regexes
   var maxCombineSize = 7
   //max repeat random size
-  var maxRepeatCombineSize = 5
+  var maxRegexSize = 5
   //shuffle seeds
   var shuffleSeed = 1711
   var shuffleSeed2 = 171178
@@ -107,7 +107,7 @@ class ExperimentParams extends Serializable {
 
     var r = 3
     r += 7 * maxCombineSize
-    r += 7 * maxRepeatCombineSize
+    r += 7 * maxRegexSize
     r += 7 * maxPaths
     r += 7 * maxMultiDepth
     r += 7 * maxSamples
@@ -151,7 +151,7 @@ class ExperimentParams extends Serializable {
       val attr = item.attribute("NAME").get.head.text
       val value = item.attribute("VALUE").get.head.text
       if (attr.equals("MAX_COMBINE_SIZE")) maxCombineSize = value.toInt
-      else if (attr.equals("MAX_REPEAT_COMBINE_SIZE")) maxRepeatCombineSize = value.toInt
+      else if (attr.equals("MAX_REGEX_SIZE")) maxRegexSize = value.toInt
       else if (attr.equals("MAX_PATHS")) maxPaths = value.toInt
       else if (attr.equals("MAX_SAMPLES")) maxSamples = value.toInt
       else if (attr.equals("FOLD_SIZE")) k = value.toInt
@@ -177,7 +177,7 @@ class ExperimentParams extends Serializable {
   def paramsXML(): String = {
     "<PARAMETERS>\n" +
       "<PARAM NAME=\"MAX_COMBINE_SIZE\" VALUE=\"" + maxCombineSize + "\"/>\n" +
-      "<PARAM NAME=\"MAX_REPEAT_COMBINE_SIZE\" VALUE=\"" + maxRepeatCombineSize + "\"/>\n" +
+      "<PARAM NAME=\"MAX_REGEX_SIZE\" VALUE=\"" + maxRegexSize + "\"/>\n" +
       "<PARAM NAME=\"MAX_PATHS\" VALUE=\"" + maxPaths + "\"/>\n" +
       "<PARAM NAME=\"MAX_MULTI_DEPTH\" VALUE=\"" + maxMultiDepth + "\"/>\n" +
       "<PARAM NAME=\"MAX_SAMPLES\" VALUE=\"" + maxSamples + "\"/>\n" +
