@@ -420,6 +420,7 @@ abstract class AbstractRegexSearch() extends Serializable {
   }
 
   def searchNegativeRegex(): Set[String] = {
+
     val pathPositives = searchDirectional().sortBy(_.cost)/*.take(ExperimentParams.maxPaths)*/
     val pathNegatives = searchNegative()
 

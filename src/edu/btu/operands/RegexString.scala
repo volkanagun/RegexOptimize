@@ -23,8 +23,6 @@ class RegexSingleString(val regexSearch: AbstractRegexSearch, override val patte
     TimeBox.measureTime[Set[String]]("filtering-regex-single", filter(set))
   }
 
-
-
   def generate(): Set[String] = {
 
     val paths = regexSearch.addPositive(positives)
