@@ -6,7 +6,7 @@ import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveEx
 
 import scala.util.Random
 
-class RegexSingleString(val regexSearch: AbstractRegexSearch, val ratio: Double = 0.0, val count: Int = 20) extends RegexGenerator(ratio, count) {
+class RegexSingleString(val regexSearch: AbstractRegexSearch, override val patternFilterRatio: Double = 0.0, val count: Int = 20) extends RegexGenerator(patternFilterRatio, count) {
 
   def filter(set: Set[String]): Set[String] = {
     filterMatch(set, positives)
