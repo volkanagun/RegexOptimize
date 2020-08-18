@@ -1,0 +1,250 @@
+Index: src/edu/btu/operands/RegexString.scala
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package edu.btu.operands\n\nimport edu.btu.task.evaluation.{ExperimentParams, TimeBox}\nimport edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveExact, NGramFilter, SinglePositiveApprox, SinglePositiveExact}\n\n\nimport scala.util.Random\n\nclass RegexSingleString(val regexSearch: AbstractRegexSearch, override val patternFilterRatio: Double = 0.0, val count: Int = 20) extends RegexGenerator(patternFilterRatio, count) {\n\n  def filter(set: Set[String]): Set[String] = {\n    filterMatch(set, positives)\n  }\n\n  def generateTimely(): Set[String] = {\n    System.out.println(\"Generating single-regex...\")\n    System.out.println(s\"Number of samples :${positives.size}...\")\n    val set = TimeBox.measureTime[Set[String]](\"generating-regex-single\", generate())\n    filterTimely(set)\n  }\n\n  def filterTimely(set: Set[String]): Set[String] = {\n    TimeBox.measureTime[Set[String]](\"filtering-regex-single\", filter(set))\n  }\n\n\n\n  def generate(): Set[String] = {\n\n    val paths = regexSearch.addPositive(positives)\n      .sizeControl()\n      .searchDirectional()\n      .sortBy(_.cost)\n      .toArray\n      .take(ExperimentParams.maxPaths)\n\n    val regexNodes = paths.map(crrPath => {\n      crrPath.toOrRegex().constructRegexNode()\n    })\n\n\n    val elems = combine(regexNodes, ExperimentParams.maxCombineSize, ExperimentParams.maxRegexSize)\n    val regexes = elems.map(nodeIndex => nodeIndex.toRegex())\n\n    regexSearch.randomize(regexes)\n  }\n\n  /*Randomization can be applied later\n  def generatePositives(random:Random):Set[String] = {\n    val paths = regexSearch.addPositive(positives)\n      .searchDirectional()\n      .sortBy(_.cost)\n      .toArray\n\n    val regexNodes = paths.map(crrPath => {\n      crrPath.toOrRegex().constructRegexNode()\n    }).distinct\n\n    val indices = for(x<-0 until regexNodes.length; y <-0 until regexNodes.length) yield (x, y)\n    val elems = indices.filter{case(x, y)=> x!=y}\n      .map{case(x, y)=> (regexNodes(x).toOrNodeIndex(regexNodes(y)))}\n    val regexes = elems.map(nodeIndex=> nodeIndex.toRegex()).toSet\n    regexes\n  }*/\n\n}\n\nclass RegexMultiString(val regexSearch: AbstractRegexSearch, filterRatio: Double = 0.0, count: Int = 20) extends RegexGenerator(filterRatio, count) {\n\n  def generateTimely(): Set[String] = {\n    System.out.println(\"Generating multi-regex...\")\n    val set = TimeBox.measureTime[Set[String]](\"generating-regex-multi\", generate())\n    filterTimely(set)\n  }\n\n  def filterTimely(set: Set[String]): Set[String] = {\n    TimeBox.measureTime[Set[String]](\"filtering-regex-multi\", filter(set))\n  }\n\n  def generate(): Set[String] = {\n\n    val regexes = regexSearch.addPositive(positives)\n      .addNegative(negatives)\n      .sizeControl()\n      .searchNegativeRegex()\n      .toSet\n\n    regexes\n\n  }\n\n  def filter(set: Set[String]): Set[String] = {\n    val posSet = filterMatch(set, positives)\n    val negSet = filterNotMatch(set, negatives)\n    posSet.intersect(negSet)\n  }\n}\n\n\nobject RegexString {\n\n  def apply(positives: Set[String], search: AbstractRegexSearch):RegexGenerator={\n    new RegexSingleString(search, ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives)\n  }\n  def apply(positives: Set[String], negatives:Set[String], search: AbstractRegexSearch):RegexGenerator={\n    new RegexMultiString(search, ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives).addNegatives(negatives)\n  }\n\n  def applyExact(positives: Set[String]): RegexGenerator = {\n    new RegexSingleString(new SinglePositiveExact(), ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives)\n  }\n\n  def applyExactAdaptive(positives: Set[String]): RegexGenerator = {\n    if (positives.head.length > 20) {}\n    new RegexSingleString(new SinglePositiveExact(), ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives)\n  }\n\n  def applyApproximate(positives: Set[String]): RegexGenerator = {\n    new RegexSingleString(new SinglePositiveApprox(), ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives)\n  }\n\n  def applyExact(positives: Set[String], negatives: Set[String]): RegexGenerator = {\n    new RegexMultiString(new MultiPositiveExact(), ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives).addNegatives(negatives)\n  }\n\n  def applyApproximate(positives: Set[String], negatives: Set[String]): RegexGenerator = {\n    new RegexMultiString(new MultiPositiveApprox(), ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives).addNegatives(negatives)\n  }\n\n  def applyNGram(positives: Set[String]): RegexGenerator = {\n    new NGramSinglePattern(ExperimentParams.patternFilterRatio, ExperimentParams.topCount)\n      .addPositives(positives)\n  }\n\n  def applyNGram(positives: Set[String], negatives: Set[String]): RegexGenerator = {\n    new NGramMultiPattern(ExperimentParams.patternFilterRatio, ExperimentParams.topCount)\n      .addPositives(positives)\n      .addNegatives(negatives)\n  }\n\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/edu/btu/operands/RegexString.scala	(revision d4697c1f8d1379d18f0fbf7170746b1727f731a8)
++++ src/edu/btu/operands/RegexString.scala	(date 1597736839564)
+@@ -32,17 +32,17 @@
+       .searchDirectional()
+       .sortBy(_.cost)
+       .toArray
+-      .take(ExperimentParams.maxPaths)
++      /*.take(ExperimentParams.maxPaths)*/
+ 
+     val regexNodes = paths.map(crrPath => {
+       crrPath.toOrRegex().constructRegexNode()
+     })
+ 
+-
+     val elems = combine(regexNodes, ExperimentParams.maxCombineSize, ExperimentParams.maxRegexSize)
+     val regexes = elems.map(nodeIndex => nodeIndex.toRegex())
+ 
+     regexSearch.randomize(regexes)
++
+   }
+ 
+   /*Randomization can be applied later
+Index: src/edu/btu/search/SinglePositiveExact.scala
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package edu.btu.search\n\nimport edu.btu.task.evaluation.TimeBox\nimport edu.btu.operands.{Cell, Path, RegexNode, RegexNodeIndex, Regexify}\n\nimport scala.util.control.Breaks\n\nclass SinglePositiveExact() extends AbstractRegexSearch() {\n\n  override def regexify(value: String): Seq[RegexNodeIndex] = Seq(Regexify.direct(value))\n\n\n  override def randomize(regexes: Set[String]): Set[String] = regexes\n\n  /*override def search(): Seq[Matrix] = {\n\n    val positiveZip1 = positives.zipWithIndex\n    val positiveZip2 = positives.zipWithIndex\n\n    val sourceTargets = positiveZip1.flatMap(pos1 => positiveZip2.map(pos2 => (pos1, pos2)))\n      .filter { case (source, target) => source._2 > target._2 }.map { case (source, target) => (source._1, target._1) }\n\n    val matrices = sourceTargets.map { case (source, target) => {\n\n      val (sizex, sizey) = (source.length, target.length)\n      val matrix = initMatrix(source, target)\n\n      for (i <- 0 until sizex) {\n\n        var prevMatching = 0\n        val breaking = Breaks\n        breaking.breakable {\n\n          for (j <- 0 until sizey) {\n\n            val cellContent = matrix(i)(j)\n\n            if (source(i).equalsByValue(target(j))) {\n              val cell = Cell(i, j)\n              cell.source = source(i)\n              cell.target = target(j)\n              cell.matching = 0\n              cell.cost = 0\n              cellContent.addCell(cell)\n              prevMatching = 0\n            }\n            else if (j == (sizey - 1)) {\n              //last column\n              //use continuous optional for source\n              val cellOptional = Cell(i, j)\n              cellOptional.source = source(i)\n              cellOptional.target = target(j)\n              cellOptional.matching = 3\n              cellOptional.cost = 2\n              cellContent.addCell(cellOptional)\n            }\n            else if (i == (sizex - 1)) {\n              //last row\n              //use continuous optional for target\n              val cellOptional = Cell(i, j)\n              cellOptional.source = source(i)\n              cellOptional.target = target(j)\n              cellOptional.matching = 4\n              cellOptional.cost = 2\n              cellContent.addCell(cellOptional)\n            }\n            else {\n\n              //use optional\n              val cellOptional = Cell(i, j)\n              cellOptional.source = source(i)\n              cellOptional.target = target(j)\n              cellOptional.matching = 2\n              cellOptional.cost = 2\n              cellContent.addCell(cellOptional)\n\n              //use or\n              val cellOr = Cell(i, j)\n              cellOr.source = source(i)\n              cellOr.target = target(j)\n              cellOr.matching = 1\n              cellOr.cost = 1\n              cellContent.addCell(cellOr)\n              prevMatching = 1\n\n            }\n          }\n        }\n\n      }\n\n      (source, target, matrix)\n    }\n\n    }\n\n    matrices.map({ case (source, target, content) => Matrix(source, target, content) })\n  }*/\n\n  override def searchDirectional(): Seq[Path] = {\n\n    TimeBox.measureTime[Seq[Path]](\"search-exact-single-positive\", searchDirectionalRegular(positives))\n\n  }\n\n  override def searchNegative(): Seq[Path] = {\n\n    TimeBox.measureTime[Seq[Path]](\"search-exact-single-positive\", searchDirectionalRegular(negatives))\n\n  }\n\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/edu/btu/search/SinglePositiveExact.scala	(revision d4697c1f8d1379d18f0fbf7170746b1727f731a8)
++++ src/edu/btu/search/SinglePositiveExact.scala	(date 1597734270619)
+@@ -1,6 +1,6 @@
+ package edu.btu.search
+ 
+-import edu.btu.task.evaluation.TimeBox
++import edu.btu.task.evaluation.{ExperimentParams, TimeBox}
+ import edu.btu.operands.{Cell, Path, RegexNode, RegexNodeIndex, Regexify}
+ 
+ import scala.util.control.Breaks
+@@ -99,13 +99,13 @@
+ 
+   override def searchDirectional(): Seq[Path] = {
+ 
+-    TimeBox.measureTime[Seq[Path]]("search-exact-single-positive", searchDirectionalRegular(positives))
++    TimeBox.measureTime[Seq[Path]]("search-exact-single-positive", searchDirectionalRegular(positives, ExperimentParams.maxPaths))
+ 
+   }
+ 
+   override def searchNegative(): Seq[Path] = {
+ 
+-    TimeBox.measureTime[Seq[Path]]("search-exact-single-positive", searchDirectionalRegular(negatives))
++    TimeBox.measureTime[Seq[Path]]("search-exact-single-positive", searchDirectionalRegular(negatives, ExperimentParams.maxPaths))
+ 
+   }
+ 
+Index: src/edu/btu/search/MultiPositiveApprox.scala
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package edu.btu.search\nimport edu.btu.task.evaluation.TimeBox\nimport edu.btu.operands.{Cell, Path, RegexNode, RegexNodeIndex, Regexify}\n\nimport scala.util.control.Breaks\n\nclass MultiPositiveApprox() extends AbstractRegexSearch() {\n\n  override def searchDirectional(): Seq[Path] = {\n    TimeBox.measureTime[Seq[Path]](\"approx-multi-positive\", searchMultiDirectional(positives))\n  }\n\n  override def searchNegative(): Seq[Path] = {\n    TimeBox.measureTime[Seq[Path]](\"approx-multi-negative\", searchMultiDirectional(negatives))\n  }\n\n  override def regexify(value: String): Seq[RegexNodeIndex] = {\n    Regexify.randomizedGrouping(value)\n  }\n\n  override def randomize(regexes: Set[String]): Set[String] = regexes.flatMap(regex=> Regexify.toRandom(regex))\n\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/edu/btu/search/MultiPositiveApprox.scala	(revision d4697c1f8d1379d18f0fbf7170746b1727f731a8)
++++ src/edu/btu/search/MultiPositiveApprox.scala	(date 1597735339065)
+@@ -1,5 +1,5 @@
+ package edu.btu.search
+-import edu.btu.task.evaluation.TimeBox
++import edu.btu.task.evaluation.{ExperimentParams, TimeBox}
+ import edu.btu.operands.{Cell, Path, RegexNode, RegexNodeIndex, Regexify}
+ 
+ import scala.util.control.Breaks
+@@ -7,11 +7,11 @@
+ class MultiPositiveApprox() extends AbstractRegexSearch() {
+ 
+   override def searchDirectional(): Seq[Path] = {
+-    TimeBox.measureTime[Seq[Path]]("approx-multi-positive", searchMultiDirectional(positives))
++    TimeBox.measureTime[Seq[Path]]("approx-multi-positive", searchMultiDirectional(positives, ExperimentParams.maxPaths))
+   }
+ 
+   override def searchNegative(): Seq[Path] = {
+-    TimeBox.measureTime[Seq[Path]]("approx-multi-negative", searchMultiDirectional(negatives))
++    TimeBox.measureTime[Seq[Path]]("approx-multi-negative", searchMultiDirectional(negatives, ExperimentParams.maxPaths))
+   }
+ 
+   override def regexify(value: String): Seq[RegexNodeIndex] = {
+Index: src/edu/btu/search/AbstractRegexSearch.scala
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package edu.btu.search\n\nimport edu.btu.operands.{Cell, Path, RegexNode, RegexNodeIndex, RegexOp, Regexify}\nimport edu.btu.task.evaluation.ExperimentParams\n\n\nimport scala.util.Random\nimport scala.util.control.Breaks\n\n\nabstract class AbstractRegexSearch() extends Serializable {\n\n  var positives = Seq[Seq[RegexNodeIndex]]()\n  var negatives = Seq[Seq[RegexNodeIndex]]()\n  var additionalCost = 10d\n  var rnd: Random = null\n\n  //def search(): Seq[Matrix]\n\n  def searchDirectional(): Seq[Path]\n\n  def searchNegative(): Seq[Path]\n\n  def regexify(value: String): Seq[RegexNodeIndex]\n\n  def randomize(value: Set[String]): Set[String]\n\n  def sizeControl(): this.type = {\n    if (positives.length == 1) positives = Seq(positives.head, positives.head)\n    if (negatives.length == 1) negatives = Seq(negatives.head, negatives.head)\n    this\n  }\n\n  def initMatrix(source: Seq[RegexNodeIndex], target: Seq[RegexNodeIndex]): Array[Array[CellContent]] = {\n\n    val sizex = source.length\n    val sizey = target.length\n\n    var matrix = Array[Array[CellContent]]()\n\n    for (i <- 0 until sizex) {\n\n      var row = Array[CellContent]()\n\n      for (j <- 0 until sizey) {\n        row = row :+ CellContent(i, j)\n      }\n\n      matrix = matrix :+ row\n\n    }\n\n    matrix\n\n  }\n\n  def initMatrix(sizex: Int, sizey: Int): Array[Array[CellContent]] = {\n\n    var matrix = Array[Array[CellContent]]()\n    for (i <- 0 until sizex) {\n\n      var row = Array[CellContent]()\n\n      for (j <- 0 until sizey) {\n        row = row :+ CellContent(i, j)\n      }\n      matrix = matrix :+ row\n    }\n    matrix\n\n  }\n\n  def setRandom(rnd: Random): this.type = {\n    this.rnd = rnd;\n    this\n  }\n\n  def addPositiveNodes(seq: Seq[RegexNodeIndex]): this.type = {\n    seq.foreach(item => {\n      positives = positives :+ Seq(item)\n    })\n    this\n  }\n\n  def addPositive(samples: Seq[String]): this.type = {\n    val sources = samples.flatMap(regexify(_).map(_.elems))\n    positives ++= sources\n    this\n  }\n\n  def addPositive(samples: Set[String]): this.type = {\n    val sources = samples.flatMap(regexify(_).map(_.elems))\n    positives ++= sources\n    this\n  }\n\n  def setPositive(samples: Set[String]): this.type = {\n    val sources = samples.flatMap(regexify(_).map(_.elems)).toSeq\n    positives = sources\n    this\n  }\n\n  def addPositive(sample: String): this.type = {\n    val source = regexify(sample)\n    positives ++= source.map(_.elems)\n    this\n  }\n\n  def addNegative(samples: Seq[String]): this.type = {\n    val sources = samples.flatMap(regexify(_).map(_.elems))\n    negatives ++= sources\n    this\n  }\n\n\n  def addNegative(samples: Set[String]): this.type = {\n    val sources = samples.flatMap(regexify(_).map(_.elems))\n    negatives ++= sources\n    this\n  }\n\n  def setNegative(samples: Set[String]): this.type = {\n    negatives = Seq[Seq[RegexNodeIndex]]()\n    addNegative(samples)\n    this\n  }\n\n  def addNegative(sample: String): this.type = {\n    val source = regexify(sample).map(_.elems)\n    negatives ++= source\n    this\n  }\n\n\n  def search(matrices: Seq[Matrix]): Seq[Seq[Path]] = {\n    matrices.map(matrix => {\n      val cells = matrix.getCells(0, 0)\n      val paths = cells.flatMap(search(_, Seq(), matrix))\n      paths\n    })\n  }\n\n  def search(matrices: Seq[Matrix], top: Int): Seq[Seq[Path]] = {\n    matrices.map(matrix => {\n      val cells = matrix.getCells(0, 0)\n      val paths = cells.flatMap(search(_, Seq(), matrix, top))\n      paths\n    })\n  }\n\n  def searchLoop(matrices: Seq[Matrix], top: Int): Seq[Seq[Path]] = {\n    matrices.map(matrix => {\n      val cells = matrix.getCells(0, 0)\n      val paths = cells.flatMap(searchLoop(_, matrix, top))\n      paths\n    })\n  }\n\n  def searchZigZagLoop(matrices: Seq[Matrix], top: Int): Seq[Seq[Path]] = {\n    val zigzagCost: Double = 10.0\n    matrices.map(matrix => {\n      val cells = matrix.getCells(0, 0)\n      val paths = cells.flatMap(searchZigZagLoop(_, matrix, top, zigzagCost))\n      paths\n    })\n  }\n\n  protected def search(newCell: Cell, paths: Seq[Path], matrix: Matrix): Seq[Path] = {\n\n    val updatePaths = if (paths.isEmpty) Seq(Path(Seq(newCell), newCell.cost))\n    else paths.map(currentPath => currentPath.copy().addCell(newCell, newCell.cost))\n\n    //while(i, j) until block is distrupted...\n    //when disrupted use recursion to create new block on the last path\n    updatePaths.flatMap(currentPath => {\n      val currentCell = currentPath.getLastCell()\n      val nextCells = currentCell.nextCells(matrix)\n      if (nextCells.isEmpty) updatePaths\n      else {\n        nextCells.flatMap(nextCell => search(nextCell, Seq(currentPath), matrix))\n      }\n    }).sortBy(_.cost)\n  }\n\n  protected def search(newCell: Cell, paths: Seq[Path], matrix: Matrix, top: Int): Seq[Path] = {\n\n    //updating current paths by adding or modifying the last cell\n    val updatePaths = if (paths.isEmpty) Seq(Path(Seq(newCell), newCell.cost))\n    else paths.map(currentPath => currentPath.copy().addCell(newCell, newCell.cost))\n\n    //last blocks of the updatepaths\n    val updateCells = newCell.nextCells(matrix)\n\n    val returnPaths = (if (updateCells.isEmpty) updatePaths\n    else updateCells.flatMap(updateCell => search(updateCell, updatePaths, matrix, top)))\n\n    returnPaths.sortBy(_.cost).take(top)\n  }\n\n  protected def searchLoop(newCell: Cell, matrix: Matrix, top: Int): Seq[Path] = {\n\n    //updating current paths by adding or modifying the last cell\n\n    var updatePaths = Seq(Path(Seq(newCell), newCell.cost))\n    var updateCelling = newCell.nextCells(matrix).map(cell => (cell, Path(Seq(newCell), newCell.cost)))\n\n\n    while (!updateCelling.isEmpty) {\n\n      val newCelling = updateCelling.map { case (cell, currentPath) => {\n        val newPath = currentPath.copy().addCell(cell, cell.cost)\n        (cell, newPath)\n        //for this cell and path\n      }\n      }\n\n      updatePaths = newCelling.map(_._2).sortBy(_.cost)\n      updateCelling = newCelling\n        .flatMap { case (cell, path) => {\n          cell.nextCells(matrix).map(newCell => (newCell, path))\n        }\n        }\n        .sortBy(_._2.cost).take(top)\n    }\n\n    updatePaths\n\n  }\n\n  protected def searchZigZagLoop(newCell: Cell, matrix: Matrix, top: Int, cost: Double): Seq[Path] = {\n\n    //updating current paths by adding or modifying the last cell\n\n    var updatePaths = Seq(Path(Seq(newCell), newCell.cost))\n    var updateCelling = newCell.nextCells(matrix).map(cell => (cell, Path(Seq(newCell), newCell.cost)))\n\n\n    while (!updateCelling.isEmpty) {\n\n      val newCelling = updateCelling.map { case (cell, currentPath) => {\n        val newPath = currentPath.copy().addCell(cell, cell.cost, cost)\n        (cell, newPath)\n        //for this cell and path\n      }\n      }\n\n      updatePaths = newCelling.map(_._2)\n      updateCelling = newCelling\n        .flatMap { case (cell, path) => {\n          cell.nextCells(matrix).map(newCell => (newCell, path))\n        }\n        }\n        .sortBy(_._2.cost).take(top)\n\n    }\n\n    updatePaths\n\n  }\n\n  def goDown(crrCell: Cell, rowLength: Int): (Boolean, Int, Int) = {\n    if (crrCell.i < (rowLength - 1)) (true, crrCell.i + 1, crrCell.j)\n    else (false, 0, 0)\n  }\n\n  def goRight(crrCell: Cell, columnLength: Int): (Boolean, Int, Int) = {\n    if (crrCell.j < (columnLength - 1)) (true, crrCell.i, crrCell.j + 1)\n    else (false, 0, 0)\n  }\n\n  def goCross(crrCell: Cell, rowLength: Int, columnLength: Int): (Boolean, Int, Int) = {\n    if (crrCell.i < (rowLength - 1) && crrCell.j < (columnLength - 1)) (true, crrCell.i + 1, crrCell.j + 1)\n    else (false, 0, 0)\n  }\n\n  protected def searchDirectional(paths: Seq[Path], source: Seq[RegexNodeIndex], target: Seq[RegexNodeIndex], i: Int, j: Int): Seq[Path] = {\n    paths.flatMap(searchDirectional(_, source, target, i, j))\n  }\n\n  def searchCost(path: Path, cell: Cell): Double = {\n    val sourceNode = cell.source\n    val targetNode = cell.target\n\n    if (path.hasLastCell()) {\n      val lastCell = path.getLastCell()\n\n      if (lastCell.directional(cell) && sourceNode.equalsByValue(targetNode)) 0.0\n      else if (lastCell.directional(cell) && sourceNode.equalsByGroup(targetNode)) 1.0\n      else if (lastCell.directional(cell) && sourceNode.matchesByGroup(targetNode)) 2.0\n      else if (lastCell.directional(cell)) 3.0\n      else 4.0\n\n    }\n    else if (sourceNode.equalsByValue(targetNode)) 0.0\n    else if (sourceNode.equalsByGroup(targetNode)) 1.0\n    else if (sourceNode.matchesByGroup(targetNode)) 2.0\n    else 3.0\n\n  }\n\n  //looks buggy looks fixed\n  protected def searchDirectional(path: Path, source: Seq[RegexNodeIndex], target: Seq[RegexNodeIndex], i: Int, j: Int): Seq[Path] = {\n\n    val sourceLength = source.length\n    val targetLength = target.length\n    val sourceNode = source(i)\n    val targetNode = target(j)\n    val cell = Cell(i, j, sourceNode, targetNode)\n\n    var paths = Set[Path]()\n    val blockCost = searchCost(path, cell)\n\n    val nextPath = path.addCell(cell, blockCost, additionalCost)\n\n    if (cell.isLast(sourceLength, targetLength)) {\n      paths = paths + nextPath\n    }\n\n    //multi\n    if (path.hasLastCell()) {\n\n      val lastCell = path.getLastCell()\n\n      if (lastCell.isDown()) {\n\n        val (canDown, di, dj) = goDown(cell, sourceLength)\n        val (canCross, ci, cj) = goCross(cell, sourceLength, targetLength)\n        if (canDown) paths ++= searchDirectional(path.copy(), source, target, di, dj)\n        if (canCross) paths ++= searchDirectional(path.copy(), source, target, ci, cj)\n      }\n\n      if (lastCell.isRight()) {\n\n        val (canRight, di, dj) = goRight(cell, targetLength)\n        val (canCross, ci, cj) = goCross(cell, sourceLength, targetLength)\n        if (canRight) paths ++= searchDirectional(path.copy(), source, target, di, dj)\n        if (canCross) paths ++= searchDirectional(path.copy(), source, target, ci, cj)\n\n      }\n\n      if (lastCell.isCross()) {\n\n        val (canRight, ri, rj) = goRight(cell, target.length)\n        val (canDown, di, dj) = goDown(cell, source.length)\n        val (canCross, ci, cj) = goCross(cell, source.length, target.length)\n\n        if (canRight) paths ++= searchDirectional(path.copy(), source, target, ri, rj)\n        if (canDown) paths ++= searchDirectional(path.copy(), source, target, di, dj)\n        if (canCross) paths ++= searchDirectional(path.copy(), source, target, ci, cj)\n\n      }\n\n    }\n    else {\n\n      val (canRight, ri, rj) = goRight(cell, target.length)\n      val (canDown, di, dj) = goDown(cell, source.length)\n      val (canCross, ci, cj) = goCross(cell, source.length, target.length)\n\n      if (canRight) paths ++= searchDirectional(path.copy(), source, target, ri, rj)\n      if (canDown) paths ++= searchDirectional(path.copy(), source, target, di, dj)\n      if (canCross) paths ++= searchDirectional(path.copy(), source, target, ci, cj)\n\n    }\n\n    //take the top 3 least costs\n    //for efficiency\n    paths.toSeq\n\n  }\n\n  protected def searchDirectionalRegular(regexNodes: Seq[Seq[RegexNodeIndex]]): Seq[Path] = {\n\n    val nodeZip1 = regexNodes.zipWithIndex\n    val nodeZip2 = regexNodes.zipWithIndex\n\n    val sourceTargets = nodeZip1.par.flatMap(pos1 => nodeZip2.map(pos2 => (pos1, pos2)))\n      .filter { case (source, target) => source._2 > target._2 }\n      .map { case (source, target) => (source._1, target._1) }\n\n    val paths = sourceTargets.flatMap { case (source, target) => {\n      searchDirectional(Path(), source, target, 0, 0)\n    }\n    }\n\n\n    paths.toArray.toSeq\n\n  }\n\n  //find the minimum change, and apply it for rejecting the negative\n  /**\n   * Summarize positive and negative and combine them into multiple paths with minimum change\n   *\n   * @return\n   */\n  def searchDirectionalNegativeOriginal(): Seq[Path] = {\n    val pathPositives = searchDirectional()\n    val pathNegatives = searchNegative()\n\n    val pathCombined = pathPositives.flatMap(positive => {\n      var paths = Seq(positive, positive.swap())\n      var newSet = Set[Path]()\n\n      for (k <- 0 until paths.size) {\n        for (i <- 0 until pathNegatives.size) {\n          newSet = newSet ++ paths(k).negativePath(pathNegatives(i))\n          newSet = newSet ++ paths(k).negativePath(pathNegatives(i).swap())\n        }\n      }\n\n      newSet\n    }).filter(_.negative)\n      .distinct\n      .toArray\n\n    pathCombined\n  }\n\n  def searchNegativeRegex(): Set[String] = {\n    val pathPositives = searchDirectional().sortBy(_.cost).take(ExperimentParams.maxPaths)\n    val pathNegatives = searchNegative()\n\n    val negativeRegexes = pathNegatives.map(path=> path.toOrRegex().createRegexNode())\n      .map(_.toRegex()).toSet.mkString(\"(?!\",\"|\",\")\")\n\n    val positiveRegexes = pathPositives.map(path=> path.toOrRegex().createRegexNode())\n      .map(_.toRegex()).toSet\n\n   positiveRegexes.map(posReg=> negativeRegexes + posReg)\n\n  }\n\n\n  def createNode(leftPath: Path, rightPath: Path): RegexNodeIndex = {\n    val leftNode = leftPath.toOrRegex().constructRegexNode()\n    val rightNode = rightPath.toOrRegex().constructRegexNode()\n    leftNode.combineOrNode(rightNode)\n  }\n\n\n  //randomize and combine path pairs\n  protected def searchMultiDirectional(regexNodes: Seq[Seq[RegexNodeIndex]], crrDepth: Int = 1): Seq[Path] = {\n\n    val random = new Random(19)\n    val minMax = math.max(regexNodes.length / 2, 1)\n\n    val sourceIndices = Range(0, minMax)\n      .map { index => random.nextInt(regexNodes.length) }\n\n    val targetIndices = Range(0, regexNodes.length)\n      .filter(!sourceIndices.contains(_))\n\n    val sourceSeq = sourceIndices.map(i => regexNodes(i))\n    val targetSeq = targetIndices.map(i => regexNodes(i))\n\n    val sourceTargets = sourceSeq.flatMap(pos1 => targetSeq.map(pos2 => (pos1, pos2)))\n\n    val allpaths = sourceTargets.flatMap { case (src, trt) => {\n      searchDirectional(Path(), src, trt, 0, 0)\n    }}\n\n    if (allpaths.length <= 2 || crrDepth == ExperimentParams.maxMultiDepth || allpaths.length > regexNodes.length) {\n      sortTake(allpaths)\n    }\n    else {\n      val nodes = sortTakeConstruct(allpaths)\n      searchMultiDirectional(nodes, crrDepth + 1)\n    }\n\n  }\n\n  def sortTake(paths: Seq[Path]): Seq[Path] = {\n    paths.sortBy(_.cost)\n      .take(ExperimentParams.maxPaths)\n  }\n\n  def sortTakeConstruct(paths: Seq[Path]): Seq[Seq[RegexNodeIndex]] = {\n    paths.sortBy(_.cost)\n      .take(ExperimentParams.maxPaths).map(path => Seq(path.toOrRegex().constructRegexNode()))\n  }\n\n  def searchRegex(paths: Seq[Path]): Seq[String] = {\n\n    val regexNodes = paths.map(crrPath => {\n      crrPath.toOrRegex().constructRegexNode()\n    }).distinct\n\n    val indices = for (x <- 0 until regexNodes.length; y <- 0 until regexNodes.length) yield (x, y)\n    val elems = indices.filter { case (x, y) => x != y }\n      .map { case (x, y) => (regexNodes(x).combineOrNode(regexNodes(y))) }\n    val regexes = elems.map(nodeIndex => nodeIndex.toRegex())\n\n    regexes\n\n  }\n\n  def searchPositiveRegex(): Seq[String] = {\n    val paths = searchDirectional()\n    searchRegex(paths)\n  }\n\n  /*def searchNegativeRegex(): Seq[String] = {\n    val paths = searchDirectionalNegative()\n    searchRegex(paths)\n  }*/\n\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/edu/btu/search/AbstractRegexSearch.scala	(revision d4697c1f8d1379d18f0fbf7170746b1727f731a8)
++++ src/edu/btu/search/AbstractRegexSearch.scala	(date 1597737971650)
+@@ -369,7 +369,7 @@
+ 
+   }
+ 
+-  protected def searchDirectionalRegular(regexNodes: Seq[Seq[RegexNodeIndex]]): Seq[Path] = {
++  protected def searchDirectionalRegular(regexNodes: Seq[Seq[RegexNodeIndex]], maxSinglePath:Int): Seq[Path] = {
+ 
+     val nodeZip1 = regexNodes.zipWithIndex
+     val nodeZip2 = regexNodes.zipWithIndex
+@@ -380,11 +380,13 @@
+ 
+     val paths = sourceTargets.flatMap { case (source, target) => {
+       searchDirectional(Path(), source, target, 0, 0)
+-    }
+-    }
++        .sortBy(_.cost)
++        .take(1)
++    }}
+ 
+ 
+-    paths.toArray.toSeq
++    paths.toArray.sortBy(_.cost)
++      .take(maxSinglePath)
+ 
+   }
+ 
+@@ -418,7 +420,7 @@
+   }
+ 
+   def searchNegativeRegex(): Set[String] = {
+-    val pathPositives = searchDirectional().sortBy(_.cost).take(ExperimentParams.maxPaths)
++    val pathPositives = searchDirectional().sortBy(_.cost)/*.take(ExperimentParams.maxPaths)*/
+     val pathNegatives = searchNegative()
+ 
+     val negativeRegexes = pathNegatives.map(path=> path.toOrRegex().createRegexNode())
+@@ -440,7 +442,7 @@
+ 
+ 
+   //randomize and combine path pairs
+-  protected def searchMultiDirectional(regexNodes: Seq[Seq[RegexNodeIndex]], crrDepth: Int = 1): Seq[Path] = {
++  protected def searchMultiDirectional(regexNodes: Seq[Seq[RegexNodeIndex]], maxSinglePath:Int,  crrDepth: Int = 1): Seq[Path] = {
+ 
+     val random = new Random(19)
+     val minMax = math.max(regexNodes.length / 2, 1)
+@@ -457,7 +459,7 @@
+     val sourceTargets = sourceSeq.flatMap(pos1 => targetSeq.map(pos2 => (pos1, pos2)))
+ 
+     val allpaths = sourceTargets.flatMap { case (src, trt) => {
+-      searchDirectional(Path(), src, trt, 0, 0)
++      searchDirectional(Path(), src, trt, 0, 0).sortBy(_.cost).take(2)
+     }}
+ 
+     if (allpaths.length <= 2 || crrDepth == ExperimentParams.maxMultiDepth || allpaths.length > regexNodes.length) {
+@@ -465,19 +467,20 @@
+     }
+     else {
+       val nodes = sortTakeConstruct(allpaths)
+-      searchMultiDirectional(nodes, crrDepth + 1)
++      searchMultiDirectional(nodes,maxSinglePath, crrDepth + 1)
+     }
+ 
+   }
+ 
+   def sortTake(paths: Seq[Path]): Seq[Path] = {
+     paths.sortBy(_.cost)
+-      .take(ExperimentParams.maxPaths)
++      .take(2*ExperimentParams.maxPaths)
+   }
+ 
+   def sortTakeConstruct(paths: Seq[Path]): Seq[Seq[RegexNodeIndex]] = {
+     paths.sortBy(_.cost)
+-      .take(ExperimentParams.maxPaths).map(path => Seq(path.toOrRegex().constructRegexNode()))
++      .take(2 * ExperimentParams.maxPaths)
++      .map(path => Seq(path.toOrRegex().constructRegexNode()))
+   }
+ 
+   def searchRegex(paths: Seq[Path]): Seq[String] = {
+@@ -489,8 +492,8 @@
+     val indices = for (x <- 0 until regexNodes.length; y <- 0 until regexNodes.length) yield (x, y)
+     val elems = indices.filter { case (x, y) => x != y }
+       .map { case (x, y) => (regexNodes(x).combineOrNode(regexNodes(y))) }
++
+     val regexes = elems.map(nodeIndex => nodeIndex.toRegex())
+-
+     regexes
+ 
+   }
+Index: src/edu/btu/search/MultiPositiveExact.scala
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package edu.btu.search\n\nimport edu.btu.task.evaluation.TimeBox\nimport edu.btu.operands.{Cell, Path, RegexNode, RegexNodeIndex, Regexify}\n\nimport scala.util.control.Breaks\n\nclass MultiPositiveExact() extends AbstractRegexSearch() {\n\n  override def regexify(value: String): Seq[RegexNodeIndex] = Seq(Regexify.direct(value))\n\n  override def randomize(value: Set[String]): Set[String] = value\n\n  /*def search(): Seq[Matrix] = {\n\n    val positiveZip1 = positives.zipWithIndex\n    val positiveZip2 = positives.zipWithIndex\n\n    val sourceTargets = positiveZip1.flatMap(pos1 => positiveZip2.map(pos2 => (pos1, pos2)))\n      .filter { case (source, target) => source._2 > target._2 }.map { case (source, target) => (source._1, target._1) }\n\n    val maxSize = positives.maxBy(_.length).length\n    val contents = initMatrix(maxSize, maxSize)\n\n    sourceTargets.foreach { case (source, target) => {\n\n      val (sizex, sizey) = (source.length, target.length)\n\n      for (i <- 0 until sizex) {\n\n        var prevMatching = 0\n        val breaking = Breaks\n\n        breaking.breakable {\n\n          for (j <- 0 until sizey) {\n\n            val cellContent = contents(i)(j)\n\n            if (source(i).equalsByValue(target(j))) {\n              val cell = Cell(i, j)\n              cell.source = source(i)\n              cell.target = target(j)\n              cell.matching = 0\n              cell.cost = 0\n              cellContent.addCell(cell)\n              prevMatching = 0\n\n            }\n            else if (j == (sizey - 1)) {\n              //last column\n              //use continuous optional for source\n              val cellOptional = Cell(i, j)\n              cellOptional.source = source(i)\n              cellOptional.target = target(j)\n              cellOptional.matching = 3\n              cellOptional.cost = 2\n              cellContent.addCell(cellOptional)\n\n            }\n            else if (i == (sizex - 1)) {\n              //last row\n              //use continuous optional for target\n              val cellOptional = Cell(i, j)\n              cellOptional.source = source(i)\n              cellOptional.target = target(j)\n              cellOptional.matching = 4\n              cellOptional.cost = 2\n              cellContent.addCell(cellOptional)\n\n            }\n            else {\n\n              //use optional\n              val cellOptional = Cell(i, j)\n              cellOptional.source = source(i)\n              cellOptional.target = target(j)\n              cellOptional.matching = 2\n              cellOptional.cost = 2\n              cellContent.addCell(cellOptional)\n\n              //use or\n              val cellOr = Cell(i, j)\n              cellOr.source = source(i)\n              cellOr.target = target(j)\n              cellOr.matching = 1\n              cellOr.cost = 1\n              cellContent.addCell(cellOr)\n              prevMatching = 1\n\n            }\n          }\n        }\n\n      }\n\n    }\n    }\n\n    Seq(Matrix(Seq(), Seq(), contents))\n  }*/\n\n\n  override def searchDirectional(): Seq[Path] = {\n    TimeBox.measureTime[Seq[Path]](\"exact-multi-positive\", searchMultiDirectional(positives))\n  }\n\n  override def searchNegative(): Seq[Path] = {\n    TimeBox.measureTime[Seq[Path]](\"exact-multi-negative\", searchMultiDirectional(negatives))\n  }\n\n\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/edu/btu/search/MultiPositiveExact.scala	(revision d4697c1f8d1379d18f0fbf7170746b1727f731a8)
++++ src/edu/btu/search/MultiPositiveExact.scala	(date 1597735354308)
+@@ -1,6 +1,6 @@
+ package edu.btu.search
+ 
+-import edu.btu.task.evaluation.TimeBox
++import edu.btu.task.evaluation.{ExperimentParams, TimeBox}
+ import edu.btu.operands.{Cell, Path, RegexNode, RegexNodeIndex, Regexify}
+ 
+ import scala.util.control.Breaks
+@@ -102,11 +102,11 @@
+ 
+ 
+   override def searchDirectional(): Seq[Path] = {
+-    TimeBox.measureTime[Seq[Path]]("exact-multi-positive", searchMultiDirectional(positives))
++    TimeBox.measureTime[Seq[Path]]("exact-multi-positive", searchMultiDirectional(positives, ExperimentParams.maxPaths))
+   }
+ 
+   override def searchNegative(): Seq[Path] = {
+-    TimeBox.measureTime[Seq[Path]]("exact-multi-negative", searchMultiDirectional(negatives))
++    TimeBox.measureTime[Seq[Path]]("exact-multi-negative", searchMultiDirectional(negatives, ExperimentParams.maxPaths))
+   }
+ 
+ 
+Index: src/edu/btu/search/SinglePositiveApprox.scala
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package edu.btu.search\n\nimport edu.btu.task.evaluation.TimeBox\nimport edu.btu.operands.{Cell, Path, RegexNode, RegexNodeIndex, Regexify}\n\nimport scala.util.control.Breaks\n\nclass SinglePositiveApprox extends AbstractRegexSearch() {\n\n  override def regexify(value: String): Seq[RegexNodeIndex] = {\n    Regexify.continousGrouping(value)\n  }\n\n  /*def search():Seq[Matrix] = {\n\n    val positiveZip1 = positives.zipWithIndex\n    val positiveZip2 = positives.zipWithIndex\n\n    val sourceTargets = positiveZip1.flatMap(pos1 => positiveZip2.map(pos2 => (pos1, pos2)))\n      .filter { case (source, target) => source._2 > target._2 }.map { case (source, target) => (source._1, target._1) }\n\n    val maxSize = positives.maxBy(_.length).length\n    val contents = initMatrix(maxSize, maxSize)\n\n    sourceTargets.foreach { case (source, target) => {\n\n      val (sizex, sizey) = (source.length, target.length)\n\n      for (i <- 0 until sizex) {\n        var prevMatching = 0\n        val breaking = Breaks\n\n        breaking.breakable {\n          for (j <- 0 until sizey) {\n\n            val cellContent = contents(i)(j)\n\n            if (source(i).equalsByGroup(target(j))) {\n              val cell = Cell(i, j)\n              cell.source = source(i)\n              cell.target = target(j)\n              cell.matching = 0\n              cell.cost = 0\n              cellContent.addCell(cell)\n              prevMatching = 0\n            }\n            else if (j == (sizey - 1)) {\n              //last column\n              //use continuous optional for source\n              val cellOptional = Cell(i, j).setColEnd()\n              cellOptional.source = source(i)\n              cellOptional.target = target(j)\n              cellOptional.matching = 3\n              cellOptional.cost = 2\n              cellContent.addCell(cellOptional)\n            }\n            else if (i == (sizex - 1)) {\n              //last row\n              //use continuous optional for target\n              val cellOptional = Cell(i, j).setRowEnd()\n                .setRowEnd()\n              cellOptional.source = source(i)\n              cellOptional.target = target(j)\n              cellOptional.matching = 4\n              cellOptional.cost = 2\n              cellContent.addCell(cellOptional)\n            }\n            else {\n              //use optional\n              val cellOptional = Cell(i, j)\n              cellOptional.source = source(i)\n              cellOptional.target = target(j)\n              cellOptional.matching = 2\n              cellOptional.cost = 2\n              cellContent.addCell(cellOptional)\n              //use or\n              val cellOr = Cell(i, j)\n              cellOr.source = source(i)\n              cellOr.target = target(j)\n              cellOr.matching = 1\n              cellOr.cost = 1\n              cellContent.addCell(cellOr)\n              prevMatching = 1\n            }\n          }\n        }\n\n      }\n    }\n    }\n\n    Seq(Matrix(Seq(), Seq(), contents))\n  }*/\n\n  override def randomize(regexes: Set[String]): Set[String] = {\n    regexes.flatMap(regex=> Regexify.toRandom(regex))\n  }\n\n  override def searchDirectional(): Seq[Path] = {\n    TimeBox.measureTime[Seq[Path]](\"approx-single-positive\", searchDirectionalRegular(positives))\n  }\n\n  override def searchNegative(): Seq[Path] = {\n    TimeBox.measureTime[Seq[Path]](\"approx-single-negative\",searchDirectionalRegular(negatives))\n  }\n\n}\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- src/edu/btu/search/SinglePositiveApprox.scala	(revision d4697c1f8d1379d18f0fbf7170746b1727f731a8)
++++ src/edu/btu/search/SinglePositiveApprox.scala	(date 1597734290700)
+@@ -1,6 +1,6 @@
+ package edu.btu.search
+ 
+-import edu.btu.task.evaluation.TimeBox
++import edu.btu.task.evaluation.{ExperimentParams, TimeBox}
+ import edu.btu.operands.{Cell, Path, RegexNode, RegexNodeIndex, Regexify}
+ 
+ import scala.util.control.Breaks
+@@ -97,11 +97,11 @@
+   }
+ 
+   override def searchDirectional(): Seq[Path] = {
+-    TimeBox.measureTime[Seq[Path]]("approx-single-positive", searchDirectionalRegular(positives))
++    TimeBox.measureTime[Seq[Path]]("approx-single-positive", searchDirectionalRegular(positives, ExperimentParams.maxPaths))
+   }
+ 
+   override def searchNegative(): Seq[Path] = {
+-    TimeBox.measureTime[Seq[Path]]("approx-single-negative",searchDirectionalRegular(negatives))
++    TimeBox.measureTime[Seq[Path]]("approx-single-negative",searchDirectionalRegular(negatives, ExperimentParams.maxPaths))
+   }
+ 
+ }
