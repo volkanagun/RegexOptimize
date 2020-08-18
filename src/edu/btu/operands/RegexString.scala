@@ -32,17 +32,17 @@ class RegexSingleString(val regexSearch: AbstractRegexSearch, val ratio: Double 
       .searchDirectional()
       .sortBy(_.cost)
       .toArray
-      .take(ExperimentParams.maxPaths)
+      /*.take(ExperimentParams.maxPaths)*/
 
     val regexNodes = paths.map(crrPath => {
       crrPath.toOrRegex().constructRegexNode()
     })
 
-
     val elems = combine(regexNodes, ExperimentParams.maxCombineSize, ExperimentParams.maxRegexSize)
     val regexes = elems.map(nodeIndex => nodeIndex.toRegex())
 
     regexSearch.randomize(regexes)
+
   }
 
   /*Randomization can be applied later

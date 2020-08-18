@@ -1,6 +1,6 @@
 package edu.btu.search
 
-import edu.btu.task.evaluation.TimeBox
+import edu.btu.task.evaluation.{ExperimentParams, TimeBox}
 import edu.btu.operands.{Cell, Path, RegexNode, RegexNodeIndex, Regexify}
 
 import scala.util.control.Breaks
@@ -102,11 +102,11 @@ class MultiPositiveExact() extends AbstractRegexSearch() {
 
 
   override def searchDirectional(): Seq[Path] = {
-    TimeBox.measureTime[Seq[Path]]("exact-multi-positive", searchMultiDirectional(positives))
+    TimeBox.measureTime[Seq[Path]]("exact-multi-positive", searchMultiDirectional(positives, ExperimentParams.maxPaths))
   }
 
   override def searchNegative(): Seq[Path] = {
-    TimeBox.measureTime[Seq[Path]]("exact-multi-negative", searchMultiDirectional(negatives))
+    TimeBox.measureTime[Seq[Path]]("exact-multi-negative", searchMultiDirectional(negatives, ExperimentParams.maxPaths))
   }
 
 
