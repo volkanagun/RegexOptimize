@@ -772,7 +772,7 @@ class TagExperiment {
   //evaluate each domain separetely
   def evaluate(folder: String): this.type = {
 
-    val mainsamples = ExperimentParams.loadSamples(readCSVFolder(folder).allsamples)
+    lazy val mainsamples = ExperimentParams.loadSamples(readCSVFolder(folder).allsamples)
 
     val domainsamples = if (ExperimentParams.selectedDomains.isEmpty) mainsamples.groupBy(_.domain)
     else mainsamples.groupBy(_.domain).filter { case (domainName, _) => ExperimentParams.selectedDomains.exists(selectedName => domainName.contains(selectedName)) }
