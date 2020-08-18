@@ -459,7 +459,7 @@ abstract class AbstractRegexSearch() extends Serializable {
     val sourceTargets = sourceSeq.flatMap(pos1 => targetSeq.map(pos2 => (pos1, pos2)))
 
     val allpaths = sourceTargets.flatMap { case (src, trt) => {
-      searchDirectional(Path(), src, trt, 0, 0).sortBy(_.cost).take(2)
+      searchDirectional(Path(), src, trt, 0, 0).sortBy(_.cost).take(5)
     }}
 
     if (allpaths.length <= 2 || crrDepth == ExperimentParams.maxMultiDepth || allpaths.length > regexNodes.length) {
