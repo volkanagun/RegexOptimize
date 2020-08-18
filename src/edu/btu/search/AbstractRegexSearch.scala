@@ -369,7 +369,7 @@ abstract class AbstractRegexSearch() extends Serializable {
 
   }
 
-  protected def searchDirectionalRegular(regexNodes: Seq[Seq[RegexNodeIndex]]): Seq[Path] = {
+  protected def searchDirectionalRegular(regexNodes: Seq[Seq[RegexNodeIndex]], maxSinglePath:Int): Seq[Path] = {
 
     val nodeZip1 = regexNodes.zipWithIndex
     val nodeZip2 = regexNodes.zipWithIndex
@@ -380,11 +380,13 @@ abstract class AbstractRegexSearch() extends Serializable {
 
     val paths = sourceTargets.flatMap { case (source, target) => {
       searchDirectional(Path(), source, target, 0, 0)
-    }
-    }
+        .sortBy(_.cost)
+        .take(1)
+    }}
 
 
-    paths.toArray.toSeq
+    paths.toArray.sortBy(_.cost)
+      .take(maxSinglePath)
 
   }
 
@@ -418,7 +420,8 @@ abstract class AbstractRegexSearch() extends Serializable {
   }
 
   def searchNegativeRegex(): Set[String] = {
-    val pathPositives = searchDirectional().sortBy(_.cost).take(ExperimentParams.maxPaths)
+
+    val pathPositives = searchDirectional().sortBy(_.cost)/*.take(ExperimentParams.maxPaths)*/
     val pathNegatives = searchNegative()
 
     val negativeRegexes = pathNegatives.map(path=> path.toOrRegex().createRegexNode())
@@ -440,7 +443,7 @@ abstract class AbstractRegexSearch() extends Serializable {
 
 
   //randomize and combine path pairs
-  protected def searchMultiDirectional(regexNodes: Seq[Seq[RegexNodeIndex]], crrDepth: Int = 1): Seq[Path] = {
+  protected def searchMultiDirectional(regexNodes: Seq[Seq[RegexNodeIndex]], maxSinglePath:Int,  crrDepth: Int = 1): Seq[Path] = {
 
     val random = new Random(19)
     val minMax = math.max(regexNodes.length / 2, 1)
@@ -457,7 +460,7 @@ abstract class AbstractRegexSearch() extends Serializable {
     val sourceTargets = sourceSeq.flatMap(pos1 => targetSeq.map(pos2 => (pos1, pos2)))
 
     val allpaths = sourceTargets.flatMap { case (src, trt) => {
-      searchDirectional(Path(), src, trt, 0, 0)
+      searchDirectional(Path(), src, trt, 0, 0).sortBy(_.cost).take(5)
     }}
 
     if (allpaths.length <= 2 || crrDepth == ExperimentParams.maxMultiDepth || allpaths.length > regexNodes.length) {
@@ -465,19 +468,20 @@ abstract class AbstractRegexSearch() extends Serializable {
     }
     else {
       val nodes = sortTakeConstruct(allpaths)
-      searchMultiDirectional(nodes, crrDepth + 1)
+      searchMultiDirectional(nodes,maxSinglePath, crrDepth + 1)
     }
 
   }
 
   def sortTake(paths: Seq[Path]): Seq[Path] = {
     paths.sortBy(_.cost)
-      .take(ExperimentParams.maxPaths)
+      .take(2*ExperimentParams.maxPaths)
   }
 
   def sortTakeConstruct(paths: Seq[Path]): Seq[Seq[RegexNodeIndex]] = {
     paths.sortBy(_.cost)
-      .take(ExperimentParams.maxPaths).map(path => Seq(path.toOrRegex().constructRegexNode()))
+      .take(2 * ExperimentParams.maxPaths)
+      .map(path => Seq(path.toOrRegex().constructRegexNode()))
   }
 
   def searchRegex(paths: Seq[Path]): Seq[String] = {
@@ -489,8 +493,8 @@ abstract class AbstractRegexSearch() extends Serializable {
     val indices = for (x <- 0 until regexNodes.length; y <- 0 until regexNodes.length) yield (x, y)
     val elems = indices.filter { case (x, y) => x != y }
       .map { case (x, y) => (regexNodes(x).combineOrNode(regexNodes(y))) }
-    val regexes = elems.map(nodeIndex => nodeIndex.toRegex())
 
+    val regexes = elems.map(nodeIndex => nodeIndex.toRegex())
     regexes
 
   }

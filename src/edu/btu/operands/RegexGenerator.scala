@@ -128,7 +128,7 @@ abstract class RegexGenerator(val patternFilterRatio: Double = 0.0, val topCount
   //compute tp/fp/tn/fn for each regex
   def filterMatch(regexSet:Set[String], trainingSamples:Set[String]):Set[String]={
     val counts = regexSet.map(regex=> (regex, trainingSamples.count(value=> value.matches(regex))))
-    val sum = trainingSamples.size
+    val sum = counts.map(_._2).sum
 
     val fregexes = counts.filter{case(regex,cnt)=> cnt.toDouble/sum >= ExperimentParams.matchSelectRatio}
     evalMatch(fregexes,regexSet.size, trainingSamples.size)
@@ -138,7 +138,7 @@ abstract class RegexGenerator(val patternFilterRatio: Double = 0.0, val topCount
 
   def filterNotMatch(regexSet:Set[String], trainingSamples:Set[String]):Set[String] = {
     val counts = regexSet.map(regex=> (regex, trainingSamples.count(value=> !value.matches(regex))))
-    val sum = trainingSamples.size
+    val sum = counts.map(_._2).sum
 
     val fregexes = counts.filter{case(regex,cnt)=> cnt.toDouble/sum >  ExperimentParams.matchSelectRatio}
     evalNotMatch(fregexes,regexSet.size, trainingSamples.size)

@@ -1,6 +1,6 @@
 package edu.btu.search
 
-import edu.btu.task.evaluation.TimeBox
+import edu.btu.task.evaluation.{ExperimentParams, TimeBox}
 import edu.btu.operands.{Cell, Path, RegexNode, RegexNodeIndex, Regexify}
 
 import scala.util.control.Breaks
@@ -97,11 +97,11 @@ class SinglePositiveApprox extends AbstractRegexSearch() {
   }
 
   override def searchDirectional(): Seq[Path] = {
-    TimeBox.measureTime[Seq[Path]]("approx-single-positive", searchDirectionalRegular(positives))
+    TimeBox.measureTime[Seq[Path]]("approx-single-positive", searchDirectionalRegular(positives, ExperimentParams.maxPaths))
   }
 
   override def searchNegative(): Seq[Path] = {
-    TimeBox.measureTime[Seq[Path]]("approx-single-negative",searchDirectionalRegular(negatives))
+    TimeBox.measureTime[Seq[Path]]("approx-single-negative",searchDirectionalRegular(negatives, ExperimentParams.maxPaths))
   }
 
 }

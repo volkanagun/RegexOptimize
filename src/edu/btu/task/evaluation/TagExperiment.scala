@@ -20,6 +20,18 @@ case class TrainTest(var train: Seq[TagSample], var test: Seq[TagSample]) {
 
   var testingByFilename = Map[String, Seq[TagSample]]()
   var testingByDomain = Map[String, Seq[TagSample]]()
+
+  var trainAttrCount = 0.0
+  var testAttrCount = 0.0
+
+  def build(): this.type = {
+
+    trainAttrCount = trainingByDomain.flatMap(_._2).map(_.properties.groupBy(_._1).size).sum
+    testAttrCount = testingByDomain.flatMap(_._2).map(_.properties.groupBy(_._1).size).sum
+
+    this
+
+  }
 }
 
 case class EvaluationResult() {
@@ -30,6 +42,8 @@ case class EvaluationResult() {
   var fnCount = Map[String, Double]()
 
   var ratioCount = Map[String, Double]()
+
+
 
   var count = 0
   var foldResults = Seq[EvaluationResult]()
@@ -203,9 +217,15 @@ case class EvaluationResult() {
     var recallTotal = 0.0
     var fmeasureTotal = 0.0
     var accuracyTotal = 0.0
-    prw.println("<DOMAINS SIZE=\"" + groupResults.size + "\">")
-    groupResults.foreach { case (domainName, result) => {
+    var totalPositiveCount = 0.0
+    var totalPositiveAttrRate = 0.0
+    var totalNegativeCount = 0.0
+    var totalNegativeAttrRate = 0.0
+    var sampleCount = 0.0
 
+    prw.println("<DOMAINS SIZE=\"" + groupResults.size + "\">")
+
+    groupResults.foreach { case (domainName, result) => {
 
       val precision = result.computePrecision()
       val recall = result.computeRecall()
@@ -222,19 +242,33 @@ case class EvaluationResult() {
       fmeasureTotal += fmeasureValue
       accuracyTotal += accuracyValue
 
+      sampleCount += result.count
 
       prw.println("<DOMAIN NAME=\"" + domainName + "\">")
       prw.println("<TRAINING>")
       Seq("positive", "negative").foreach { name => {
         val ratioName = name + "-ratio"
         val sizeName = name + "-size"
+        val attrName = name + "-attr"
+
+        if(name.equals("positive")){
+          totalPositiveCount += result.ratioCount.getOrElse(sizeName, 0.0)
+          totalPositiveAttrRate += result.ratioCount.getOrElse(attrName, 0.0)
+        }
+        else {
+          totalNegativeCount += result.ratioCount.getOrElse(sizeName, 0.0)
+          totalNegativeAttrRate += result.ratioCount.getOrElse(attrName, 0.0)
+        }
         val ratioStr = "<RATIO  NAME=\"" + name + "\" VALUE=\"" + result.ratioCount.getOrElse(ratioName, 0.0) + "\"/>"
         val sizeStr = "<SIZE  NAME=\"" + name + "\" VALUE=\"" + result.ratioCount.getOrElse(sizeName, 0.0) + "\"/>"
+        val attrStr = "<ATTR  NAME=\"" + name + "\" VALUE=\"" + result.ratioCount.getOrElse(attrName, 0.0) + "\"/>"
+
         prw.println(sizeStr)
+        prw.println(attrStr)
         prw.println(ratioStr)
 
-      }
-      }
+      }}
+
       prw.println("</TRAINING>")
       prw.println(s"<PRECISION>\n${precisionValue}\n</PRECISION>")
       prw.println(s"<RECALL>\n${recallValue}\n</RECALL>")
@@ -247,11 +281,20 @@ case class EvaluationResult() {
 
     prw.println("</DOMAINS>")
     prw.println("<SUMMARY>")
+
     prw.println(s"<PRECISION>\n${precisionTotal / groupResults.size}\n</PRECISION>")
     prw.println(s"<RECALL>\n${recallTotal / groupResults.size}\n</RECALL>")
     prw.println(s"<FMEASURE>\n${fmeasureTotal / groupResults.size}\n</FMEASURE>")
     prw.println(s"<ACCURACY>\n${accuracyTotal / groupResults.size}\n</ACCURACY>")
+
+    prw.println(s"<TRAINPOS>\n${totalPositiveCount}\n</TRAINPOS>")
+    prw.println(s"<TRAINNEG>\n${totalNegativeCount}\n</TRAINNEG>")
+    prw.println(s"<POSATTR>\n${totalPositiveAttrRate/groupResults.size}\n</POSATTR>")
+    prw.println(s"<NEGATTR>\n${totalNegativeAttrRate/groupResults.size}\n</NEGATTR>")
+
+    prw.println(s"<COUNT>\n${sampleCount}\n</COUNT>")
     prw.println("</SUMMARY>")
+
     prw.println(ExperimentParams.paramsXML())
     prw.println(TimeBox.xml())
 
@@ -706,6 +749,7 @@ class TagExperiment {
       evaluateMatchTimely(name, trainDecide, positiveMap, negativeMap, testingSet)
     }
 
+
     mainResult.append(eval)
 
     this
@@ -728,7 +772,7 @@ class TagExperiment {
   //evaluate each domain separetely
   def evaluate(folder: String): this.type = {
 
-    val mainsamples = ExperimentParams.loadSamples(readCSVFolder(folder).allsamples)
+    lazy val mainsamples = ExperimentParams.loadSamples(readCSVFolder(folder).allsamples)
 
     val domainsamples = if (ExperimentParams.selectedDomains.isEmpty) mainsamples.groupBy(_.domain)
     else mainsamples.groupBy(_.domain).filter { case (domainName, _) => ExperimentParams.selectedDomains.exists(selectedName => domainName.contains(selectedName)) }
@@ -746,6 +790,7 @@ class TagExperiment {
       case (domainName, ccsamples) => {
 
         val trainTestSeq = crossvalidate(ExperimentParams.k, ccsamples, ExperimentParams.maxSamples)
+
         val mainEval = EvaluationResult()
 
         trainTestSeq.zipWithIndex.foreach { case (trainTest, foldNum) => {
@@ -778,7 +823,7 @@ class TagExperiment {
       }
     }
 
-    main
+    main.map(_.build())
   }
 
   def crossUpdate(main: Seq[TrainTest], crr: Seq[TrainTest]): Seq[TrainTest] = {
@@ -796,9 +841,7 @@ class TagExperiment {
 
   def crossvalidateAll(k: Int, crrDomainSamples: Seq[TagSample]): Seq[TrainTest] = {
 
-    println(s"Splitting dataset for cross-validation of ${
-      k
-    }")
+    println(s"Splitting dataset for cross-validation of ${k}")
     //consider positives and negatives
     var crrSamples = crrDomainSamples
     val splitSize = crrDomainSamples.size / k

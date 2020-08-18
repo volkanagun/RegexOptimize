@@ -6,7 +6,7 @@ import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveEx
 
 import scala.util.Random
 
-class RegexSingleString(val regexSearch: AbstractRegexSearch, val ratio: Double = 0.0, val count: Int = 20) extends RegexGenerator(ratio, count) {
+class RegexSingleString(val regexSearch: AbstractRegexSearch, override val patternFilterRatio: Double = 0.0, val count: Int = 20) extends RegexGenerator(patternFilterRatio, count) {
 
   def filter(set: Set[String]): Set[String] = {
     filterMatch(set, positives)
@@ -23,8 +23,6 @@ class RegexSingleString(val regexSearch: AbstractRegexSearch, val ratio: Double 
     TimeBox.measureTime[Set[String]]("filtering-regex-single", filter(set))
   }
 
-
-
   def generate(): Set[String] = {
 
     val paths = regexSearch.addPositive(positives)
@@ -32,17 +30,17 @@ class RegexSingleString(val regexSearch: AbstractRegexSearch, val ratio: Double 
       .searchDirectional()
       .sortBy(_.cost)
       .toArray
-      .take(ExperimentParams.maxPaths)
+      /*.take(ExperimentParams.maxPaths)*/
 
     val regexNodes = paths.map(crrPath => {
       crrPath.toOrRegex().constructRegexNode()
     })
 
-
-    val elems = combine(regexNodes, ExperimentParams.maxCombineSize, ExperimentParams.maxRepeatCombineSize)
+    val elems = combine(regexNodes, ExperimentParams.maxCombineSize, ExperimentParams.maxRegexSize)
     val regexes = elems.map(nodeIndex => nodeIndex.toRegex())
 
     regexSearch.randomize(regexes)
+
   }
 
   /*Randomization can be applied later
