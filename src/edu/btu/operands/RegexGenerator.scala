@@ -48,7 +48,6 @@ abstract class RegexGenerator(val patternFilterRatio: Double = 0.0, val topCount
     this
   }
 
-
   protected def combineBy(seq:Seq[RegexNodeIndex], size:Int, id:Int) :RegexNodeIndex={
     //take several combine if not have it
     var mainNode = Regexify.toOrNode(0)

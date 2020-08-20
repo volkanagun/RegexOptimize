@@ -82,6 +82,21 @@ case class EvaluationResult() {
     System.out.println(s"Total number of experiments: ${count}")
     if (foldCount > 0) System.out.println(s"Total number of folds: ${foldCount}")
 
+
+
+
+    foldResults.zipWithIndex.foreach {
+      case (foldResult, i) => {
+        System.out.println(s"Evaluation Fold: ${i}")
+        foldResult.trainingSummary()
+        foldResult.summary()
+      }
+    }
+
+    println("===========++++++++++++++===========")
+    println("===========Final Averages===========")
+    println("===========++++++++++++++===========")
+    println("===========++++++++++++++===========")
     trainingSummary()
     System.out.println(s"Total averages")
 
@@ -99,15 +114,6 @@ case class EvaluationResult() {
     print("Recall", recall)
     print("F-Measure", fmeasure)
     print("Accuracy", accuracy)
-
-
-    foldResults.zipWithIndex.foreach {
-      case (foldResult, i) => {
-        System.out.println(s"Evaluation Fold: ${i}")
-        foldResult.trainingSummary()
-        foldResult.summary()
-      }
-    }
 
     this
   }
@@ -177,12 +183,12 @@ case class EvaluationResult() {
   }
 
   def append(evaluationResult: EvaluationResult): this.type = {
+
     evaluationResult.tpCount.foreach { case (name, count) => incTP(name, count) }
     evaluationResult.fpCount.foreach { case (name, count) => incFP(name, count) }
     evaluationResult.tnCount.foreach { case (name, count) => incTN(name, count) }
     evaluationResult.fnCount.foreach { case (name, count) => incFN(name, count) }
     inc(evaluationResult.count)
-
 
     foldResults :+= evaluationResult
     this
@@ -413,7 +419,7 @@ class TagExperiment {
   //do the train/test for each domain
   //do the accuracy for each domain
   def readCSVFolder(folder: String): this.type = {
-    new File(folder).list().foreach(filename => readCSV(folder + filename))
+    new File(folder).list().filter(_.endsWith("csv")).foreach(filename => readCSV(folder + filename))
     this
   }
 
@@ -727,7 +733,9 @@ class TagExperiment {
 
     val trainingMap = regexGenMap.map { case (name, regexGenerators) => {
 
-      val regexStrings = regexGenerators.map(gen=> gen.generateTimely()).filter(!_.isEmpty)
+      val regexStrings = regexGenerators.map(gen=> gen.generateTimely())
+        .filter(!_.isEmpty)
+
       (name -> regexStrings)
     }}.toMap.filter { case (name, set) => !set.isEmpty }
 

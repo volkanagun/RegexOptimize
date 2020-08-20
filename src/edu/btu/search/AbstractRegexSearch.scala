@@ -1,8 +1,9 @@
 package edu.btu.search
 
+import java.nio.file.Paths
+
 import edu.btu.operands.{Cell, Path, RegexNode, RegexNodeIndex, RegexOp, Regexify}
 import edu.btu.task.evaluation.ExperimentParams
-
 
 import scala.util.Random
 import scala.util.control.Breaks
@@ -369,6 +370,35 @@ abstract class AbstractRegexSearch() extends Serializable {
 
   }
 
+
+  protected def pathBinning(paths: Seq[Path]):Seq[Path] = {
+
+    val headMap = paths.sortBy(_.cost)
+      .groupBy(path => path.cost)
+
+    var seq = Seq[Path]()
+    var index = 0;
+    var count = 0;
+
+    while(count < 1) {
+
+      if(headMap.contains(index)){
+
+        val hh = headMap(index).head
+        val ll = headMap(index).last
+
+        seq = seq :+ hh
+        seq = seq :+ ll
+        count+=1
+
+      }
+
+      index += 1
+    }
+
+    seq
+  }
+
   protected def searchDirectionalRegular(regexNodes: Seq[Seq[RegexNodeIndex]], maxSinglePath:Int): Seq[Path] = {
 
     val nodeZip1 = regexNodes.zipWithIndex
@@ -379,9 +409,7 @@ abstract class AbstractRegexSearch() extends Serializable {
       .map { case (source, target) => (source._1, target._1) }
 
     val paths = sourceTargets.flatMap { case (source, target) => {
-      searchDirectional(Path(), source, target, 0, 0)
-        .sortBy(_.cost)
-        .take(1)
+      pathBinning(searchDirectional(Path(), source, target, 0, 0))
     }}
 
 
@@ -460,7 +488,7 @@ abstract class AbstractRegexSearch() extends Serializable {
     val sourceTargets = sourceSeq.flatMap(pos1 => targetSeq.map(pos2 => (pos1, pos2)))
 
     val allpaths = sourceTargets.flatMap { case (src, trt) => {
-      searchDirectional(Path(), src, trt, 0, 0).sortBy(_.cost).take(5)
+      pathBinning(searchDirectional(Path(), src, trt, 0, 0))
     }}
 
     if (allpaths.length <= 2 || crrDepth == ExperimentParams.maxMultiDepth || allpaths.length > regexNodes.length) {

@@ -177,13 +177,16 @@ class ExperimentParams extends Serializable {
   def paramsXML(): String = {
     "<PARAMETERS>\n" +
       "<PARAM NAME=\"MAX_COMBINE_SIZE\" VALUE=\"" + maxCombineSize + "\"/>\n" +
+      "<!--max regex size is the final regex size for single attribute value-->\n" +
       "<PARAM NAME=\"MAX_REGEX_SIZE\" VALUE=\"" + maxRegexSize + "\"/>\n" +
+      "<!--max paths is equal to maxCombineSize * maxRegexSize-->\n" +
       "<PARAM NAME=\"MAX_PATHS\" VALUE=\"" + maxPaths + "\"/>\n" +
       "<PARAM NAME=\"MAX_MULTI_DEPTH\" VALUE=\"" + maxMultiDepth + "\"/>\n" +
       "<PARAM NAME=\"MAX_SAMPLES\" VALUE=\"" + maxSamples + "\"/>\n" +
       "<PARAM NAME=\"FOLD_SIZE\" VALUE=\"" + k + "\"/>\n" +
       "<PARAM NAME=\"NGRAM_LENGTH\" VALUE=\"" + ngramLength + "\"/>\n" +
       "<PARAM NAME=\"NGRAM_STEP_LENGTH\" VALUE=\"" + ngramStepLength + "\"/>\n" +
+      "<!--top count is equal to input sample size-->\n" +
       "<PARAM NAME=\"TOP_COUNT\" VALUE=\"" + topCount + "\"/>\n" +
       "<PARAM NAME=\"PATTERN_FILTER_RATIO\" VALUE=\"" + patternFilterRatio + "\"/>\n" +
       "<PARAM NAME=\"MATCH_SELECT_RATIO\" VALUE=\"" + matchSelectRatio + "\"/>\n" +
