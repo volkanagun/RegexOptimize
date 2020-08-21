@@ -733,10 +733,10 @@ class TagExperiment {
 
     val trainingMap = regexGenMap.map { case (name, regexGenerators) => {
 
-      val regexStrings = regexGenerators.map(gen=> gen.generateTimely())
+      val regexStrings = regexGenerators.par.map(gen=> gen.generateTimely())
         .filter(!_.isEmpty)
-
       (name -> regexStrings)
+
     }}.toMap.filter { case (name, set) => !set.isEmpty }
 
     val eval = if (ExperimentParams.isSingle()) {

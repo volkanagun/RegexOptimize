@@ -101,7 +101,6 @@ object RegexString {
     new RegexSingleString(search, ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives)
   }
 
-
   def apply(positives: Set[String], negatives:Set[String], search: AbstractRegexSearch):RegexGenerator={
     new RegexMultiString(search, ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives).addNegatives(negatives)
   }
