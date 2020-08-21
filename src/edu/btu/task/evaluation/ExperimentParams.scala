@@ -31,12 +31,12 @@ class ExperimentParams extends Serializable {
 
   //cross-validation folds
   var k = 3
-  //number of search paths increase for better accuracy
-  var maxPaths = 500
   //combine maximum 3 regexes
   var maxCombineSize = 7
   //max repeat random size
   var maxRegexSize = 5
+  //number of search paths increase for better accuracy
+  var maxPaths = 2 * maxCombineSize * maxRegexSize
   //shuffle seeds
   var shuffleSeed = 1711
   var shuffleSeed2 = 171178
@@ -130,7 +130,8 @@ class ExperimentParams extends Serializable {
   def saveXML(): this.type = {
     val rootOpen = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
       "<ROOT>\n"
-    val params = paramsXML()
+    val params = paramsXML().split("\\n").filter(line=> !line.contains("MAX_PATH")).mkString("\n")
+
 
     val all = rootOpen + params + "\n</ROOT>"
 
@@ -152,7 +153,7 @@ class ExperimentParams extends Serializable {
       val value = item.attribute("VALUE").get.head.text
       if (attr.equals("MAX_COMBINE_SIZE")) maxCombineSize = value.toInt
       else if (attr.equals("MAX_REGEX_SIZE")) maxRegexSize = value.toInt
-      else if (attr.equals("MAX_PATHS")) maxPaths = value.toInt
+      /*else if (attr.equals("MAX_PATHS")) maxPaths = value.toInt*/
       else if (attr.equals("MAX_SAMPLES")) maxSamples = value.toInt
       else if (attr.equals("FOLD_SIZE")) k = value.toInt
       else if (attr.equals("NGRAM_LENGTH")) ngramLength = value.toInt
