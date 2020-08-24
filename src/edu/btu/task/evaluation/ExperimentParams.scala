@@ -16,6 +16,13 @@ class ExperimentParams extends Serializable {
   val singleNGRAM = "SINGLE-NGRAM"
   val multiNGRAM = "MULTI-NGRAM"
 
+  val sampleSize= "SAMPLE SIZE"
+  val sampleRatio= "SAMPLE RATIO"
+  val fileSize= "FILE SIZE"
+  val fileRatio= "FILE RATIO"
+  val fileDomainRatio= "FILE DOMAIN RATIO"
+  val fileSampleRatio= "FILE SAMPLE RATIO"
+
   //search with multiple regexes
   val regexMulti = "REGEX-MULTI"
   //search with single regex construct longer regex
@@ -177,11 +184,11 @@ class ExperimentParams extends Serializable {
 
   def paramsXML(): String = {
     "<PARAMETERS>\n" +
-      "<PARAM NAME=\"MAX_COMBINE_SIZE\" VALUE=\"" + maxCombineSize + "\"/>\n" +
+      "<!--max paths is equal to maxCombineSize * maxRegexSize-->\n" +
+     "<PARAM NAME=\"MAX_COMBINE_SIZE\" VALUE=\"" + maxCombineSize + "\"/>\n" +
       "<!--max regex size is the final regex size for single attribute value-->\n" +
       "<PARAM NAME=\"MAX_REGEX_SIZE\" VALUE=\"" + maxRegexSize + "\"/>\n" +
-      "<!--max paths is equal to maxCombineSize * maxRegexSize-->\n" +
-      "<PARAM NAME=\"MAX_PATHS\" VALUE=\"" + maxPaths + "\"/>\n" +
+      /*"<PARAM NAME=\"MAX_PATHS\" VALUE=\"" + maxPaths + "\"/>\n" +*/
       "<PARAM NAME=\"MAX_MULTI_DEPTH\" VALUE=\"" + maxMultiDepth + "\"/>\n" +
       "<PARAM NAME=\"MAX_SAMPLES\" VALUE=\"" + maxSamples + "\"/>\n" +
       "<PARAM NAME=\"FOLD_SIZE\" VALUE=\"" + k + "\"/>\n" +
@@ -261,8 +268,7 @@ class ExperimentParams extends Serializable {
     regexGenMap.map { case (name, generators) => {
       val nonEmptyGens = generators.filter(regexGenerator => regexGenerator.filter())
       (name, nonEmptyGens)
-    }
-    }.filter(!_._2.isEmpty)
+    }}.filter(!_._2.isEmpty)
 
   }
 
@@ -311,21 +317,20 @@ class ExperimentParams extends Serializable {
 
   def regexGenerator(training: => Set[TagSample]): Map[String, Seq[RegexGenerator]] = {
 
-    if (experimentCycle.contains(singleExact) && experimentCycle.contains(regexSingle)) {
+    if (experimentCycle.contains(singleExact)) {
       val positiveSamples = training.filter(!_.isNegative)
       val posMap = positiveSamples.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
         .groupBy(_._1).mapValues(_.map(_._2)).mapValues(positiveCases => Seq(RegexString.applyExact(positiveCases)))
       posMap
-
     }
-    else if (experimentCycle.contains(singleApprox) && experimentCycle.contains(regexSingle)) {
+    else if (experimentCycle.contains(singleApprox)) {
       val positiveSamples = training.filter(!_.isNegative)
       val posMap = positiveSamples.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
         .groupBy(_._1).mapValues(_.map(_._2)).mapValues(positiveCases => Seq(RegexString.applyApproximate(positiveCases)))
       posMap
 
     }
-    else if (experimentCycle.contains(singleExact) && experimentCycle.contains(regexMulti)) {
+    /*else if (experimentCycle.contains(singleExact) && experimentCycle.contains(regexMulti)) {
       val positiveSamples = training.filter(!_.isNegative)
       val posMap = positiveSamples.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
         .groupBy(_._1).mapValues(_.map(_._2)).mapValues(positiveCases => Seq(RegexString.applyExact(positiveCases)))
@@ -335,8 +340,8 @@ class ExperimentParams extends Serializable {
 
       posMap
 
-    }
-    else if (experimentCycle.contains(singleApprox) && experimentCycle.contains(regexMulti)) {
+    }*/
+    /*else if (experimentCycle.contains(singleApprox) && experimentCycle.contains(regexMulti)) {
       val positiveSamples = training.filter(!_.isNegative)
       val posMap = positiveSamples.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
         .groupBy(_._1).mapValues(_.map(_._2)).mapValues(positiveCases => Seq(RegexString.applyApproximate(positiveCases)))
@@ -346,7 +351,7 @@ class ExperimentParams extends Serializable {
 
       posMap
 
-    }
+    }*/
     else if (experimentCycle.contains(multiExact)) {
       val positiveSamples = training.filter(!_.isNegative)
       val negativeSamples = training.filter(_.isNegative)

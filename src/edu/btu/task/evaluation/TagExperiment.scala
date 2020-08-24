@@ -127,6 +127,12 @@ case class EvaluationResult() {
     }
     }
 
+    println(s"${ExperimentParams.sampleSize} : ${ratioCount.getOrElse(ExperimentParams.sampleSize, 0.0)}")
+    println(s"${ExperimentParams.sampleRatio} : ${ratioCount.getOrElse(ExperimentParams.sampleRatio, 0.0)}")
+    println(s"${ExperimentParams.fileSize} : ${ratioCount.getOrElse(ExperimentParams.fileSize, 0.0)}")
+    println(s"${ExperimentParams.fileDomainRatio} : ${ratioCount.getOrElse(ExperimentParams.fileDomainRatio, 0.0)}")
+    println(s"${ExperimentParams.fileSampleRatio} : ${ratioCount.getOrElse(ExperimentParams.fileSampleRatio, 0.0)}")
+
     this
   }
 
@@ -309,6 +315,11 @@ case class EvaluationResult() {
     this
   }
 
+  /*def filterSave():this.type ={
+    groupResults = groupResults.filter{case(name, eval)=> eval.computePrecision().head._2 > 0.3}
+    save()
+  }*/
+
   def appendTraining(trainingResult: EvaluationResult): this.type = {
     trainingResult.ratioCount.foreach { case (name, count) => incRatio(name, count) }
     this
@@ -320,6 +331,10 @@ case class EvaluationResult() {
 
   def incRatio(name: String, defaultValue: Double = 1.0): this.type = {
     ratioCount = append(name, ratioCount, defaultValue)
+    this
+  }
+  def incRatioBy(name: String, updateValue: Double): this.type = {
+    ratioCount = ratioCount.updated(name, ratioCount.getOrElse(name, 0.0)+updateValue)
     this
   }
 
@@ -378,6 +393,16 @@ class TagExperiment {
 
   def initParams(): this.type = {
     ExperimentParams.loadXML().saveXML()
+    this
+  }
+
+  def initParams(name:String, topCount:Int, maxCombineSize:Int): this.type = {
+    val experimentParams = ExperimentParams.loadXML()
+    experimentParams.experimentCycle = Array(name)
+    experimentParams.topCount = topCount
+    experimentParams.maxCombineSize = maxCombineSize
+    experimentParams.saveXML()
+    experimentParams.loadXML()
     this
   }
 
@@ -733,11 +758,11 @@ class TagExperiment {
 
     val trainingMap = regexGenMap.map { case (name, regexGenerators) => {
 
-      val regexStrings = regexGenerators.par.map(gen=> gen.generateTimely())
+      val regexStrings = regexGenerators.map(gen=> gen.generateTimely())
         .filter(!_.isEmpty)
       (name -> regexStrings)
 
-    }}.toMap.filter { case (name, set) => !set.isEmpty }
+    }}.filter { case (name, set) => !set.isEmpty }.toMap
 
     val eval = if (ExperimentParams.isSingle()) {
       val name = "evaluation-single-regex"
@@ -793,13 +818,21 @@ class TagExperiment {
 
     println(s"Number of domains: ${filtersamples.size}")
 
-    evaluationResult = filtersamples.map {
+    evaluationResult = filtersamples.par.map {
 
       case (domainName, ccsamples) => {
 
         val trainTestSeq = crossvalidate(ExperimentParams.k, ccsamples, ExperimentParams.maxSamples)
 
         val mainEval = EvaluationResult()
+
+        val fileSize = domainFileMap.getOrElse(domainName, Seq()).length + 1
+        mainEval.incRatioBy(ExperimentParams.sampleSize,  ccsamples.length)
+        mainEval.incRatioBy(ExperimentParams.sampleRatio, ccsamples.length.toDouble / filtersamples.size)
+        mainEval.incRatioBy(ExperimentParams.fileSize, fileSize)
+        mainEval.incRatioBy(ExperimentParams.fileDomainRatio, fileSize / filtersamples.size)
+        mainEval.incRatioBy(ExperimentParams.fileSampleRatio, (ccsamples.length / fileSize) / filtersamples.size)
+
 
         trainTestSeq.zipWithIndex.foreach { case (trainTest, foldNum) => {
           lazy val ntt = buildSamples(trainTest)
@@ -808,7 +841,7 @@ class TagExperiment {
 
         (domainName -> mainEval)
       }
-    }
+    }.toArray.toMap
 
     this
 
@@ -819,6 +852,7 @@ class TagExperiment {
 
     thisSamples.groupBy(_.domain).foreach {
       case (domain, samples) => {
+        println(s"Splitting dataset for cross-validation of ${k}")
         val positives = samples.filter(!_.isNegative).take(maxSize)
         val negatives = samples.filter(_.isNegative).take(maxSize)
         val posDist = positives.length.toDouble / k
@@ -849,7 +883,7 @@ class TagExperiment {
 
   def crossvalidateAll(k: Int, crrDomainSamples: Seq[TagSample]): Seq[TrainTest] = {
 
-    println(s"Splitting dataset for cross-validation of ${k}")
+
     //consider positives and negatives
     var crrSamples = crrDomainSamples
     val splitSize = crrDomainSamples.size / k

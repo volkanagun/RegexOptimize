@@ -2,8 +2,6 @@ package edu.btu.operands
 
 import edu.btu.task.evaluation.{ExperimentParams, TimeBox}
 import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveExact, NGramFilter, SinglePositiveApprox, SinglePositiveExact}
-
-
 import scala.util.Random
 
 class RegexSingleString(val regexSearch: AbstractRegexSearch, override val patternFilterRatio: Double = 0.0, val count: Int = 20) extends RegexGenerator(patternFilterRatio, count) {
@@ -32,9 +30,9 @@ class RegexSingleString(val regexSearch: AbstractRegexSearch, override val patte
       .toArray
       /*.take(ExperimentParams.maxPaths)*/
 
-    val regexNodes = paths.map(crrPath => {
+    val regexNodes = paths.par.map(crrPath => {
       crrPath.toOrRegex().constructRegexNode()
-    })
+    }).toArray
 
     val elems = combine(regexNodes, ExperimentParams.maxCombineSize, ExperimentParams.maxRegexSize)
     val regexes = elems.map(nodeIndex => nodeIndex.toRegex())
@@ -97,7 +95,7 @@ class RegexMultiString(val regexSearch: AbstractRegexSearch, filterRatio: Double
 
 object RegexString {
 
-  def apply(positives: Set[String], search: AbstractRegexSearch):RegexGenerator={
+  def apply(positives: Set[String], search: AbstractRegexSearch):RegexGenerator = {
     new RegexSingleString(search, ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives)
   }
 
