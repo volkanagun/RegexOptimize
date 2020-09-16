@@ -132,6 +132,7 @@ object RegexEvaluate {
   def test(label:String, regsex:Seq[String], text:String) : LabelResult = {
     val labelResult = LabelResult(label)
     println(s"Number of test regexes: ${regsex.length}")
+
     regsex.foreach(regex => {
       val doMatch = text.matches("^" + regex + "$")
       if("Positive".matches(label) && doMatch) labelResult.incrementTP().incrementCount()

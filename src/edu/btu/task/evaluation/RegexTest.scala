@@ -1,39 +1,42 @@
 package edu.btu.task.evaluation
 
 import edu.btu.operands.{RegexMultiString, RegexSingleString}
-import edu.btu.search.{MultiPositiveApprox, SinglePositiveApprox, SinglePositiveExact}
+import edu.btu.search.{MultiPositiveApprox, MultiPositiveExact, SinglePositiveApprox, SinglePositiveExact}
 
 object RegexTest {
 
   def main(args: Array[String]): Unit = {
-    test4()
+    test3()
   }
+
   def test0(): Unit ={
+
     val seq = Seq("abc","abz", "xyz")
-    new RegexSingleString(new SinglePositiveExact()).testOrEfficient(seq, new SinglePositiveExact())
+    new RegexSingleString(ExperimentParams().loadXML(), new SinglePositiveExact()).testOrEfficient(seq, new SinglePositiveExact())
+
   }
 
   def test1(): Unit ={
 
     val seq = Seq("assets!", "horchow", "!horcho", "orchow!", "!images", "rchow!c", "1!produ", "!assets", "!com!ca", "!!image")
-    new RegexSingleString(new SinglePositiveExact()).testOrEfficient(seq, new SinglePositiveExact())
+    new RegexSingleString(ExperimentParams().loadXML(),new SinglePositiveExact()).testOrEfficient(seq, new SinglePositiveExact())
 
   }
 
   def test2(): Unit = {
 
     val seq = Seq("assets!", "horchow", "!horcho", "orchow!", "!images", "rchow!c", "1!produ", "!assets", "!com!ca", "!!image")
-    new RegexSingleString(new SinglePositiveExact()).testOrEfficient(seq, new SinglePositiveApprox())
+    new RegexSingleString(ExperimentParams().loadXML(),new SinglePositiveExact()).testOrEfficient(seq, new SinglePositiveApprox())
 
   }
 
 
   def test3(): Unit = {
 
-    val seqPos = Seq("ABCXEFG", "ABCEFG")
+    val seqPos = Seq("ABCXEFG", "ABCZEFG","ABCXXXX")
     val seqNeg = Seq("5555555", "111111")
 
-    new RegexMultiString(new MultiPositiveApprox()).testOrEfficient(seqPos,seqNeg, new MultiPositiveApprox())
+    new RegexMultiString(ExperimentParams().loadXML(),new MultiPositiveApprox()).testOrEfficient(seqPos,seqNeg, new MultiPositiveExact())
 
   }
 
@@ -41,7 +44,7 @@ object RegexTest {
 
     val seqPos = Seq("123-WXTX", "123-KXTX")
 
-    new RegexSingleString(new SinglePositiveExact()).testOrEfficient(seqPos, new SinglePositiveExact())
+    new RegexSingleString(ExperimentParams().loadXML(),new SinglePositiveExact()).testOrEfficient(seqPos, new SinglePositiveExact())
 
   }
 

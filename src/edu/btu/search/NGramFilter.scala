@@ -41,8 +41,7 @@ class NGramFilter(var patternFilterRatio:Double) extends Serializable {
    * @return
    */
   def ngrams(item:String):Set[String] = {
-    val nitem = clean(item)
-    val slices = nitem.sliding(sliceSize, stepSize).toSet
+    val slices = item.sliding(sliceSize, stepSize).toSet
     slices
   }
 
@@ -90,8 +89,8 @@ class NGramFilter(var patternFilterRatio:Double) extends Serializable {
     slice(filtered)
   }
 
-  def commonSet():Set[String]={
-    freqDictionary.toSeq.sortBy(_._2).reverse.map(_._1).take(topCount).toSet
+  def commonSet(excludeFilter:Map[String, Int]):Set[String]={
+    freqDictionary.filter{case(item, _)=> !excludeFilter.contains(item)}.toSeq.sortBy(_._2).reverse.map(_._1).take(topCount).toSet
   }
 
 

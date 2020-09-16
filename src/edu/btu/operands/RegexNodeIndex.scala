@@ -18,6 +18,7 @@ case class RegexNodeIndex(var maxDex: Int, var regexOp: RegexOp, var elems: Seq[
 
   regexOp.setContainer(this)
 
+
   def setNegate(doNegate: Boolean = false): this.type = {
     this.notNode = doNegate
     this

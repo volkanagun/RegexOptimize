@@ -6,4 +6,13 @@ package edu.btu.mlp
 //use the heuristic to formulate the reinforcement problem...
 class NNRegex {
 
+
+  //create a regular expression from scratch by using supervised learning
+  //learning a generic regex creator from text to regex
+  //that is something
+
+
+  //create a second model with the heuristic you developed
+
+
 }

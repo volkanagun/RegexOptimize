@@ -44,14 +44,16 @@ object Regexify {
   val digit = "\\d"
   val range = "[a-z]"
 
-  val groupings = Seq(letter, upchar, punct, space, lowchar, digit)/*.map(item=>
-    item.replaceAll("\\{","\\\\\\{")
-    .replaceAll("\\}","\\\\}")
-    .replaceAll("\\\\", "\\\\")
-    .replaceAll("\\[","\\\\[")
-    .replaceAll("\\]","\\\\]"))*/
+  val groupings = Seq(letter, upchar, punct, space, lowchar, digit)
+  /*.map(item=>
+      item.replaceAll("\\{","\\\\\\{")
+      .replaceAll("\\}","\\\\}")
+      .replaceAll("\\\\", "\\\\")
+      .replaceAll("\\[","\\\\[")
+      .replaceAll("\\]","\\\\]"))*/
 
   val rnd = new Random(1121711)
+  val rnd2 = new Random(1121712)
 
 
   def toOrRegex(source: RegexNodeIndex, target: RegexNodeIndex): String = {
@@ -83,11 +85,12 @@ object Regexify {
     RegexNodeIndex(indice, RegexOp(Regexify.seq))
   }
 
-  def toSeqNode(indice: Int, element:RegexNodeIndex): RegexNodeIndex = {
+  def toSeqNode(indice: Int, element: RegexNodeIndex): RegexNodeIndex = {
     RegexNodeIndex(indice, RegexOp(Regexify.seq), Seq(element))
   }
-  def toSeqNode(indice: Int, elements:Seq[RegexNodeIndex]): RegexNodeIndex = {
-    RegexNodeIndex(indice, RegexOp(Regexify.seq),elements)
+
+  def toSeqNode(indice: Int, elements: Seq[RegexNodeIndex]): RegexNodeIndex = {
+    RegexNodeIndex(indice, RegexOp(Regexify.seq), elements)
   }
 
   def toOrExactRegex(source: RegexNodeIndex, target: RegexNodeIndex): String = {
@@ -244,20 +247,19 @@ object Regexify {
   }
 
 
-
   //find inner matches
-  def continousOrGrouping(mainNode:RegexNodeIndex) : RegexNodeIndex = {
+  def continousOrGrouping(mainNode: RegexNodeIndex): RegexNodeIndex = {
 
-    val groupedElems = mainNode.elems.map(node=> continousGrouping(node))
+    val groupedElems = mainNode.elems.map(node => continousGrouping(node))
     var indexedElems = groupedElems.zipWithIndex
 
-    val matchElems = groupedElems.map(crrNode=> indexedElems.filter{case(subElem, in) => subElem.matchesByInfGroup(crrNode)})
-      .zipWithIndex.sortBy(pair=> pair._1.length)
+    val matchElems = groupedElems.map(crrNode => indexedElems.filter { case (subElem, in) => subElem.matchesByInfGroup(crrNode) })
+      .zipWithIndex.sortBy(pair => pair._1.length)
       .reverse
 
     var i = 0
     var seq = Seq[RegexNodeIndex]()
-    while(!indexedElems.isEmpty) {
+    while (!indexedElems.isEmpty) {
 
       //take matches of i
       val (matches, nodei) = matchElems(i)
@@ -272,7 +274,7 @@ object Regexify {
         .setMatchGroup(newGroup).setMatchTxt(crrNode.matchTxt)
 
       seq :+= newNode
-      indexedElems = indexedElems.filter(pair=> !matches.map(_._2).contains(pair._2))
+      indexedElems = indexedElems.filter(pair => !matches.map(_._2).contains(pair._2))
     }
 
 
@@ -355,7 +357,7 @@ object Regexify {
 
     if (char.isLetterOrDigit) char.toString
     else if (char == ' ') "\\s"
-    else if (char == '"' || char == '+' || char == '-' || char == '?' || char == '!' || char == '.' || char == ':' || char == ';' || char == '$' || char == '^' || char == '[' || char == ']' || char == '(' || char == ')' || char == '{' || char == '}' || char == '=' || char == '*') "\\" + char.toString
+    else if (char == '"' || char == '+' || char == '-' || char == '?' || char == '!' || char == '.' || char == ':' || char == ';' || char == '$' || char == '^' || char == '[' || char == ']' || char == '(' || char == ')' || char == '{' || char == '}' || char == '=' || char == '*' || char == '\\') "\\" + char.toString
     else char.toString
 
   }
@@ -368,14 +370,14 @@ object Regexify {
     else if (char.isLetter) letter
     else if (char.isWhitespace) space
     else if (char == '[' || char == ']' || char == '(' || char == ')' || char == '{' || char == '}' || char == '?' || char == '!' || char == '.' || char == ':' || char == ';') punct
-    else if (char == '+' || char == '-') "\\" + char
+    else if (char == '+' || char == '-' || char == '*' || char == '!' || char == '\\') "\\" + char
     else char.toString
   }
 
 
-  def toNegateRegex(elems: Seq[RegexNodeIndex], parentOp: String, parentOpCount: Int = 0, mkStr:String = ""): (String, String, String) ={
+  def toNegateRegex(elems: Seq[RegexNodeIndex], parentOp: String, parentOpCount: Int = 0, mkStr: String = ""): (String, String, String) = {
     val ornegs = elems.filter(_.notNode)
-    val ors = elems.filter(! _.notNode)
+    val ors = elems.filter(!_.notNode)
 
     val (cvalue, cgroup, ctxt) = toRegex(ors, parentOp, parentOpCount, mkStr)
     val (nvalue, ngroup, ntxt) = toRegex(ornegs, parentOp, parentOpCount, mkStr)
@@ -430,16 +432,64 @@ object Regexify {
   }
 
 
-  def flipCoin(prev: String, crr:String): Boolean = {
-    if(crr.equals("(")||crr.equals(")")||crr.equals("{")||crr.equals("[")||crr.equals("]")||crr.equals("}") || crr.equals("\\") || crr.equals("+") || crr.matches("\\d")) false
-    else if(prev.equals("\\") && crr.matches("(\\p{L}|\\p{Punct})")) false
-    else if((prev.equals("p")||prev.startsWith("L")) && crr.matches("\\p{Punct}")) false
-    else if(prev.matches("\\p{Punct}") && (crr.startsWith("L")||crr.startsWith("P"))) false
+  def flipCoin(prev: String, crr: String): Boolean = {
+    if (crr.equals("(") || crr.equals(")") || crr.equals("{") || crr.equals("[") || crr.equals("]") || crr.equals("}") || crr.equals("\\") || crr.equals("+") || crr.equals("*")) false
+    else if (prev.equals("\\") && crr.matches("(\\p{L}|\\p{Punct})")) false
+    else if ((prev.equals("p") || prev.startsWith("L")) && crr.matches("\\p{Punct}")) false
+    else if (prev.matches("\\p{Punct}") && (crr.startsWith("L") || crr.startsWith("P"))) false
     else rnd.nextBoolean()
   }
 
-  def toRandom(regex:String):Set[String] = {
-    randomize(regex, 5).map(crr=>{
+  def countPatterns(regex: String, patternStr: String): String = {
+
+    val rep = patternStr
+    val pattern = Pattern.compile(rep)
+    val matcher = pattern.matcher(regex)
+    var count = 0
+    var mainStart = 0
+    var mainEnd = 0
+    var found = false
+    var breaking = Breaks
+
+    var seq = Seq[(Int,Int, Int)]()
+    breaking.breakable {
+      while (matcher.find()) {
+
+        val start = matcher.start()
+        val end = matcher.start()
+
+        if (!found) {
+          mainStart = start
+          mainEnd = end
+          found = true
+        }
+
+        if (mainEnd + 1 == start) {
+          count += 1
+          mainEnd = end
+        }
+        else {
+          seq :+= (mainStart, mainEnd, count)
+          mainStart = start
+          mainEnd = end
+          count = 0
+        }
+      }
+    }
+    var nregex =  ""
+    var pend = 0
+    seq.foreach {case(i, j, cnt)=>{
+      nregex += regex.substring(pend, i) + patternStr + s"{${cnt}}"
+      pend = j
+    }}
+
+    nregex += regex.substring(pend, regex.length)
+    nregex
+
+  }
+
+  def toRandom(regex: String): Set[String] = {
+    randomize(regex, 3).map(crr => {
       replace(crr)
     })
   }
@@ -447,16 +497,16 @@ object Regexify {
   // do not randomize groups
   def randomize(regex: String): String = {
     val map = Range(0, regex.length)
-      .map(i => (i, flipCoin(regex(math.max(i-1, 0)).toString, regex(i).toString)))
-      .filter(pair=> pair._2)
-      .map(pair=> pair._1->group(regex(pair._1))).toMap
+      .map(i => (i, flipCoin(regex(math.max(i - 1, 0)).toString, regex(i).toString)))
+      .filter(pair => pair._2)
+      .map(pair => pair._1 -> group(regex(pair._1))).toMap
 
-    Range(0, regex.length).map(i=> if(map.contains(i)) map(i) else regex(i))
+    Range(0, regex.length).map(i => if (map.contains(i)) map(i) else regex(i))
       .mkString("")
   }
 
   def randomize(regex: String, repeat: Int): Set[String] = {
-    var seq = Set[String]()
+    var seq = Set[String](regex)
     for (i <- 0 until repeat) {
       var result = randomize(regex)
       seq += result
@@ -465,9 +515,9 @@ object Regexify {
     seq
   }
 
-  def replace(regex:String):String={
+  def replace(regex: String): String = {
     var newregex = regex;
-    groupings.foreach(crr=> {
+    groupings.foreach(crr => {
       newregex = replace(newregex, crr)
 
     })
@@ -476,8 +526,7 @@ object Regexify {
   }
 
 
-
-  def replace(regex:String, grouping:String) : String={
+  def replace(regex: String, grouping: String): String = {
     val search = grouping
     val regexSingle = "(" + Pattern.quote(search) + ")"
     val regexMulti = "(" + Pattern.quote(search) + ")+"
@@ -486,12 +535,12 @@ object Regexify {
 
     var result = "";
     var start = 0
-    while (matcher.find()){
+    while (matcher.find()) {
       val matchCrr = matcher.group()
       val st = matcher.start()
       val en = matcher.end()
       val size = regexSingle.r.findAllMatchIn(matchCrr).size
-      if(size > 1) result += regex.substring(start, st) + search + s"{${size}}"
+      if (size > 1) result += regex.substring(start, st) + search + s"{${size}}"
       else result += regex.substring(start, st) + search
       start = en
     }
@@ -499,7 +548,6 @@ object Regexify {
     result += regex.substring(start)
     result
   }
-
 
 
   def toRegex(regex: String, opName: String, opCount: Int): String = {
@@ -542,7 +590,7 @@ object Regexify {
           else if (opname.equals(optional)) toRegex(elems, opname, opcount)
           else throw new Exception(s"Operation group not found for group: ${opname} and value: ${opname}")
         }
-        else if(opname.equals(negate) && !matchValue.startsWith("(?!")){
+        else if (opname.equals(negate) && !matchValue.startsWith("(?!")) {
           (s"(?!${matchValue})", s"(?!${matchGroup})", s"(?!${matchTxt})")
         }
         else {
@@ -603,8 +651,9 @@ object Regexify {
     println(print("<div class=\"dygtag-slot dygtag-site-top dygtag-ldb3 dygtag-unfilled\">"))
     println(print("<div class=\"dygtag-slot dygtag-popup dygtag-outofpage dygtag-ins dygtag-unfilled\">"))*/
 
-    val str = "aaa\\d\\d\\d\\p{L}\\p{L}"
+    val str = "aaa\\d\\d\\d\\p{L}\\p{L}\\p{L}\\p{L}"
     println(toRandom(str).mkString("\n"))
+    println(countPatterns(randomize(str),"\\p{L}"))
 
   }
 }

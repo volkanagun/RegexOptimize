@@ -8,7 +8,7 @@ import edu.btu.task.evaluation.{ExperimentParams, TimeBox}
  * @param filterRatio
  * @param count
  */
-class NGramSinglePattern(filterRatio: Double = 0.0, count: Int = 20) extends RegexGenerator(filterRatio, count) {
+class NGramSinglePattern(experimentParams: ExperimentParams, filterRatio: Double = 0.0, count: Int = 20) extends RegexGenerator(experimentParams, filterRatio, count) {
 
   def generateTimely(): Set[String] = {
     System.out.println("Generating regex...")
@@ -52,8 +52,7 @@ class NGramSinglePattern(filterRatio: Double = 0.0, count: Int = 20) extends Reg
  * @param filterRatio
  * @param count
  */
-class NGramMultiPattern(filterRatio: Double = 0.0, count: Int = 20) extends RegexGenerator(filterRatio, count) {
-
+class NGramMultiPattern(experimentParams: ExperimentParams, filterRatio: Double = 0.0, count: Int = 20) extends RegexGenerator(experimentParams, filterRatio, count) {
 
   def generateTimely(): Set[String] = {
     System.out.println("Generating regex...")
@@ -94,7 +93,7 @@ class NGramMultiPattern(filterRatio: Double = 0.0, count: Int = 20) extends Rege
 
   def filter(set: Set[String]): Set[String] = {
     val posSet = filterMatch(set, positives)
-    val negSet = filterMatch(set, negatives)
-    posSet
+    val negSet = filterNotMatch(set, negatives)
+    posSet.intersect(negSet)
   }
 }

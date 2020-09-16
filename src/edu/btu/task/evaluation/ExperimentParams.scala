@@ -5,7 +5,7 @@ import java.io._
 import edu.btu.operands.{RegexGenerator, RegexString}
 import edu.btu.task.tagmatch.TagSample
 
-import scala.xml.XML
+import scala.xml.{NodeSeq, XML}
 
 class ExperimentParams extends Serializable {
 
@@ -16,12 +16,14 @@ class ExperimentParams extends Serializable {
   val singleNGRAM = "SINGLE-NGRAM"
   val multiNGRAM = "MULTI-NGRAM"
 
-  val sampleSize= "SAMPLE SIZE"
-  val sampleRatio= "SAMPLE RATIO"
-  val fileSize= "FILE SIZE"
-  val fileRatio= "FILE RATIO"
-  val fileDomainRatio= "FILE DOMAIN RATIO"
-  val fileSampleRatio= "FILE SAMPLE RATIO"
+  val sampleSize = "SAMPLE SIZE"
+  val relevantCount = "POSITIVE COUNT"
+  val irrelevantCount = "NEGATIVE COUNT"
+  val sampleDomainRatio = "SAMPLE DOMAIN RATIO"
+  val fileSize = "FILE SIZE"
+  val fileRatio = "FILE RATIO"
+  val fileDomainRatio = "FILE DOMAIN RATIO"
+  val fileSampleRatio = "FILE SAMPLE RATIO"
 
   //search with multiple regexes
   val regexMulti = "REGEX-MULTI"
@@ -43,7 +45,7 @@ class ExperimentParams extends Serializable {
   //max repeat random size
   var maxRegexSize = 5
   //number of search paths increase for better accuracy
-  var maxPaths = 2 * maxCombineSize * maxRegexSize
+  var maxPaths = maxCombineSize * maxRegexSize
   //shuffle seeds
   var shuffleSeed = 1711
   var shuffleSeed2 = 171178
@@ -56,7 +58,7 @@ class ExperimentParams extends Serializable {
   //used to filter accepted regex patterns
   //low ratio increase the number of regex patterns while decreases the efficiency
   //choose -1 for ngrams
-  var matchSelectRatio: Double = 0.07d
+  var matchSelectRatio: Double = 0.01d
 
   //the ratio of common n-gram dictionary patterns for the sample
   //accept or reject the positive or negative sample pattern for n-grams
@@ -83,52 +85,60 @@ class ExperimentParams extends Serializable {
   val allMapFilename = "resources/binary/regexGen"
   val allSamplesFilename = "resources/binary/samples.bin"
 
-  var selectedDomains = Seq("https://www.nikkan-gendai.com")
+  var excludedDomains = Seq[String]()
+  var selectedDomains = Seq[String]()
   val paramsFilename = "resources/params.xml"
 
   var minimumPositiveSamples = 20
 
+
+
+
   def generationMapID(domainName: String, foldNum: Int): Int = {
 
-    var r = 3
-    r += 7 * foldNum
-    r += 7 * ngramLength
-    r += 7 * ngramStepLength
-    r += 7 * topCount
-    r += 7 * patternFilterRatio.hashCode()
-    r += 7 * maxSamples
-    r += 7 * k
-    r += 7 * maxPaths
-    r += 7 * maxMultiDepth
-    r += 7 * domainName.hashCode
-    r += 7 * experimentCycle.toSeq.hashCode()
-    r += 7 * selectedDomains.hashCode()
-    r += 7 * minimumPositiveSamples
-    r += 7 * rndElemLength
-
+    var r = 1
+    r = 3 * r + foldNum
+    r = 3 * r + ngramLength
+    r = 3 * r + ngramStepLength
+    r = 3 * r + topCount
+    r = 3 * r + patternFilterRatio.hashCode()
+    r = 3 * r + matchSelectRatio.hashCode()
+    r = 3 * r + maxSamples
+    r = 3 * r + k
+    r = 3 * r + maxPaths
+    r = 3 * r + maxMultiDepth
+    r = 3 * r + domainName.hashCode
+    r = 3 * r + experimentCycle.toSeq.hashCode()
+    r = 3 * r + excludedDomains.hashCode()
+    r = 3 * r + selectedDomains.hashCode()
+    r = 3 * r + minimumPositiveSamples
+    r = 3 * r + rndElemLength
     r
 
   }
 
+  //accomplished
   def generationID(): String = {
 
-    var r = 3
-    r += 7 * maxCombineSize
-    r += 7 * maxRegexSize
-    r += 7 * maxPaths
-    r += 7 * maxMultiDepth
-    r += 7 * maxSamples
-    r += 7 * k
-    r += 7 * ngramLength
-    r += 7 * ngramStepLength
-    r += 7 * topCount
-    r += 7 * patternFilterRatio.hashCode()
-    r += 7 * experimentCycle.toSeq.hashCode()
-    r += 7 * selectedDomains.hashCode()
-    r += 7 * minimumPositiveSamples
-    r += 7 * rndElemLength
+    var r = 1
+    r = 3 * r + maxCombineSize
+    r = 3 * r + maxRegexSize
+    r = 3 * r + maxPaths
+    r = 3 * r + maxMultiDepth
+    r = 3 * r + maxSamples
+    r = 3 * r + k
+    r = 3 * r + ngramLength
+    r = 3 * r + ngramStepLength
+    r = 3 * r + topCount
+    r = 3 * r + patternFilterRatio.hashCode()
+    r = 3 * r + matchSelectRatio.hashCode()
+    r = 3 * r + experimentCycle.toSeq.hashCode()
+    r = 3 * r + excludedDomains.hashCode()
+    r = 3 * r + selectedDomains.hashCode()
+    r = 3 * r + minimumPositiveSamples
+    r = 3 * r + rndElemLength
 
-    r += 7 * (if (doNGramFilter) 1 else 0)
+    r = 3 * r + (if (doNGramFilter) 1 else 0)
 
     String.valueOf(r)
 
@@ -137,7 +147,7 @@ class ExperimentParams extends Serializable {
   def saveXML(): this.type = {
     val rootOpen = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
       "<ROOT>\n"
-    val params = paramsXML().split("\\n").filter(line=> !line.contains("MAX_PATH")).mkString("\n")
+    val params = paramsXML().split("\\n").filter(line => !line.contains("MAX_PATH")).mkString("\n")
 
 
     val all = rootOpen + params + "\n</ROOT>"
@@ -170,7 +180,7 @@ class ExperimentParams extends Serializable {
       else if (attr.equals("PATTERN_FILTER_RATIO")) patternFilterRatio = value.toDouble
       else if (attr.equals("MATCH_SELECT_RATIO")) matchSelectRatio = value.toDouble
       else if (attr.equals("EXPERIMENT_CYCLE")) experimentCycle = value.split("\\+\\+").filter(!_.isEmpty)
-      else if (attr.equals("SELECTED_DOMAINS")) selectedDomains = value.split("\\+\\+").filter(!_.isEmpty)
+      else if (attr.equals("SELECTED_DOMAINS")) excludedDomains = value.split("\\+\\+").filter(!_.isEmpty)
       else if (attr.equals("NGRAM_FILTER")) doNGramFilter = value.toBoolean
       else if (attr.equals("DOMAIN_EXPERIMENT")) domainNotFile = value.toBoolean
       else if (attr.equals("MIN_POS_SAMPLES")) minimumPositiveSamples = value.toInt
@@ -179,13 +189,43 @@ class ExperimentParams extends Serializable {
 
     })
 
+    maxPaths = maxCombineSize * maxRegexSize
+
+    this
+  }
+
+  def loadXML(params: NodeSeq):this.type ={
+    params.foreach(item => {
+      val attr = item.attribute("NAME").get.head.text
+      val value = item.attribute("VALUE").get.head.text
+      if (attr.equals("MAX_COMBINE_SIZE")) maxCombineSize = value.toInt
+      else if (attr.equals("MAX_REGEX_SIZE")) maxRegexSize = value.toInt
+      /*else if (attr.equals("MAX_PATHS")) maxPaths = value.toInt*/
+      else if (attr.equals("MAX_SAMPLES")) maxSamples = value.toInt
+      else if (attr.equals("FOLD_SIZE")) k = value.toInt
+      else if (attr.equals("NGRAM_LENGTH")) ngramLength = value.toInt
+      else if (attr.equals("NGRAM_STEP_LENGTH")) ngramStepLength = value.toInt
+      else if (attr.equals("MAX_MULTI_DEPTH")) maxMultiDepth = value.toInt
+      else if (attr.equals("TOP_COUNT")) topCount = value.toInt
+      else if (attr.equals("PATTERN_FILTER_RATIO")) patternFilterRatio = value.toDouble
+      else if (attr.equals("MATCH_SELECT_RATIO")) matchSelectRatio = value.toDouble
+      else if (attr.equals("EXPERIMENT_CYCLE")) experimentCycle = value.split("\\+\\+").filter(!_.isEmpty)
+      else if (attr.equals("SELECTED_DOMAINS")) excludedDomains = value.split("\\+\\+").filter(!_.isEmpty)
+      else if (attr.equals("NGRAM_FILTER")) doNGramFilter = value.toBoolean
+      else if (attr.equals("DOMAIN_EXPERIMENT")) domainNotFile = value.toBoolean
+      else if (attr.equals("MIN_POS_SAMPLES")) minimumPositiveSamples = value.toInt
+      else if (attr.equals("RND_GROUPING_SIZE")) rndElemLength = value.toInt
+      else {}
+    })
+
+    maxPaths = maxCombineSize * maxRegexSize
     this
   }
 
   def paramsXML(): String = {
     "<PARAMETERS>\n" +
       "<!--max paths is equal to maxCombineSize * maxRegexSize-->\n" +
-     "<PARAM NAME=\"MAX_COMBINE_SIZE\" VALUE=\"" + maxCombineSize + "\"/>\n" +
+      "<PARAM NAME=\"MAX_COMBINE_SIZE\" VALUE=\"" + maxCombineSize + "\"/>\n" +
       "<!--max regex size is the final regex size for single attribute value-->\n" +
       "<PARAM NAME=\"MAX_REGEX_SIZE\" VALUE=\"" + maxRegexSize + "\"/>\n" +
       /*"<PARAM NAME=\"MAX_PATHS\" VALUE=\"" + maxPaths + "\"/>\n" +*/
@@ -199,7 +239,7 @@ class ExperimentParams extends Serializable {
       "<PARAM NAME=\"PATTERN_FILTER_RATIO\" VALUE=\"" + patternFilterRatio + "\"/>\n" +
       "<PARAM NAME=\"MATCH_SELECT_RATIO\" VALUE=\"" + matchSelectRatio + "\"/>\n" +
       "<PARAM NAME=\"EXPERIMENT_CYCLE\" VALUE=\"" + experimentCycle.mkString("++") + "\"/>\n" +
-      "<PARAM NAME=\"SELECTED_DOMAINS\" VALUE=\"" + selectedDomains.mkString("++") + "\"/>\n" +
+      "<PARAM NAME=\"SELECTED_DOMAINS\" VALUE=\"" + excludedDomains.mkString("++") + "\"/>\n" +
       "<PARAM NAME=\"NGRAM_FILTER\" VALUE=\"" + doNGramFilter + "\"/>\n" +
       "<PARAM NAME=\"DOMAIN_EXPERIMENT\" VALUE=\"" + domainNotFile + "\"/>\n" +
       "<PARAM NAME=\"MIN_POS_SAMPLES\" VALUE=\"" + minimumPositiveSamples + "\"/>\n" +
@@ -222,7 +262,8 @@ class ExperimentParams extends Serializable {
   def loadSamples(samples: => Seq[TagSample]): Seq[TagSample] = {
     if (samplesBinaryExists()) {
       println("")
-      loadObject[Seq[TagSample]](allSamplesFilename)
+      val allsamples = loadObject[Seq[TagSample]](allSamplesFilename)
+      allsamples
     }
     else {
       saveSamples(samples)
@@ -237,16 +278,32 @@ class ExperimentParams extends Serializable {
     saveObject[Array[(String, Seq[RegexGenerator])]](mapFilename(id), regexGenMap)
   }
 
-  def loadGenerator(regexGenMap: => Array[(String, Seq[RegexGenerator])], id: Int): Array[(String, Seq[RegexGenerator])] = {
-    if (mapBinaryExists(id)) loadObject[Array[(String, Seq[RegexGenerator])]](mapFilename(id))
-    else saveObject(mapFilename(id), regexGenMap)
+  def loadGenerator(regexGenMap: => Array[(String, Seq[RegexGenerator])], id: Int, force: Boolean = true): Array[(String, Seq[RegexGenerator])] = {
+    if (mapBinaryExists(id)) {
+      val obj = loadObject[Array[(String, Seq[RegexGenerator])]](mapFilename(id))
+      if (obj == null || force) {
+        saveObject(mapFilename(id), regexGenMap)
+      }
+      else obj
+    }
+    else {
+      saveObject(mapFilename(id), regexGenMap)
+    }
   }
 
-  def loadObject[A](filename: String): A = {
-    val objin = new ObjectInputStream(new FileInputStream(filename))
-    val value = objin.readObject().asInstanceOf[A]
-    objin.close()
-    value
+  def loadObject[A >: Null](filename: String): A = {
+    try {
+      val objin = new ObjectInputStream(new FileInputStream(filename))
+      val value = objin.readObject().asInstanceOf[A]
+      objin.close()
+      value
+    }
+    catch {
+      case _ => {
+        println("Error in filename: " + filename)
+        null
+      }
+    }
   }
 
 
@@ -263,12 +320,14 @@ class ExperimentParams extends Serializable {
     println("Filter generators...")
     regexGenMap.foreach { case (_, generators) => {
       if (ExperimentParams.doNGramFilter) generators.map(generator => generator.filterSlice())
-    }}
+    }
+    }
 
     regexGenMap.map { case (name, generators) => {
       val nonEmptyGens = generators.filter(regexGenerator => regexGenerator.filter())
       (name, nonEmptyGens)
-    }}.filter(!_._2.isEmpty)
+    }
+    }.filter(!_._2.isEmpty)
 
   }
 
@@ -320,15 +379,14 @@ class ExperimentParams extends Serializable {
     if (experimentCycle.contains(singleExact)) {
       val positiveSamples = training.filter(!_.isNegative)
       val posMap = positiveSamples.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
-        .groupBy(_._1).mapValues(_.map(_._2)).mapValues(positiveCases => Seq(RegexString.applyExact(positiveCases)))
+        .groupBy(_._1).mapValues(_.map(_._2)).mapValues(positiveCases => Seq(RegexString.applyExact(this, positiveCases)))
       posMap
     }
     else if (experimentCycle.contains(singleApprox)) {
       val positiveSamples = training.filter(!_.isNegative)
       val posMap = positiveSamples.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
-        .groupBy(_._1).mapValues(_.map(_._2)).mapValues(positiveCases => Seq(RegexString.applyApproximate(positiveCases)))
+        .groupBy(_._1).mapValues(_.map(_._2)).mapValues(positiveCases => Seq(RegexString.applyApproximate(this, positiveCases)))
       posMap
-
     }
     /*else if (experimentCycle.contains(singleExact) && experimentCycle.contains(regexMulti)) {
       val positiveSamples = training.filter(!_.isNegative)
@@ -353,17 +411,19 @@ class ExperimentParams extends Serializable {
 
     }*/
     else if (experimentCycle.contains(multiExact)) {
+
       val positiveSamples = training.filter(!_.isNegative)
       val negativeSamples = training.filter(_.isNegative)
 
-        val posMap = positiveSamples.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
-          .groupBy(_._1).mapValues(_.map(_._2))
-        val negMap = negativeSamples.flatMap(tg => tg.negativeRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
-          .groupBy(_._1).mapValues(_.map(_._2))
+      val posMap = positiveSamples.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
+        .groupBy(_._1).mapValues(_.map(_._2))
+      val negMap = negativeSamples.flatMap(tg => tg.negativeRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
+        .groupBy(_._1).mapValues(_.map(_._2))
 
-        //generate two regexes for positive and negative
-        posMap.map { case (tag, positiveCases) => (tag, positiveCases, negMap.getOrElse(tag, Set())) }
-          .map { case (tag, pos, neg) => tag -> Seq(RegexString.applyExact(pos, neg), RegexString.applyExact(neg, pos)) }.toMap
+      //generate two regexes for positive and negative
+      posMap.map { case (tag, positiveCases) => (tag, positiveCases, negMap.getOrElse(tag, Set())) }
+        .map { case (tag, pos, neg) => tag -> Seq(RegexString.applyExact(this, pos, neg), RegexString.applyExact(this, neg, pos)) }
+        .toMap
 
     }
     else if (experimentCycle.contains(multiApprox)) {
@@ -371,13 +431,13 @@ class ExperimentParams extends Serializable {
       val negativeSamples = training.filter(_.isNegative)
 
 
-        val positiveMap = positiveSamples.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
-          .groupBy(_._1).mapValues(_.map(_._2))
-        val negativeMap = negativeSamples.flatMap(tg => tg.negativeRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
-          .groupBy(_._1).mapValues(_.map(_._2))
-        //generate two regexes for positive and negative
-        positiveMap.map { case (tag, positiveCases) => (tag, positiveCases, negativeMap.getOrElse(tag, Set())) }
-          .map { case (tag, pos, neg) => tag -> Seq(RegexString.applyApproximate(pos, neg), RegexString.applyApproximate(neg, pos)) }.toMap
+      val positiveMap = positiveSamples.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
+        .groupBy(_._1).mapValues(_.map(_._2))
+      val negativeMap = negativeSamples.flatMap(tg => tg.negativeRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
+        .groupBy(_._1).mapValues(_.map(_._2))
+      //generate two regexes for positive and negative
+      positiveMap.map { case (tag, positiveCases) => (tag, positiveCases, negativeMap.getOrElse(tag, Set())) }
+        .map { case (tag, pos, neg) => tag -> Seq(RegexString.applyApproximate(this, pos, neg), RegexString.applyApproximate(this, neg, pos)) }.toMap
 
     }
 
@@ -387,7 +447,7 @@ class ExperimentParams extends Serializable {
       val positiveMap = positiveSamples.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
         .groupBy(_._1).mapValues(_.map(_._2))
       positiveMap.map { case (tag, positiveCases) => (tag, positiveCases) }
-        .map { case (tag, pos) => tag -> Seq(RegexString.applyNGram(pos)) }
+        .map { case (tag, pos) => tag -> Seq(RegexString.applyNGram(this, pos)) }
 
     }
     else if (experimentCycle.contains(multiNGRAM)) {
@@ -401,7 +461,7 @@ class ExperimentParams extends Serializable {
         .groupBy(_._1).mapValues(_.map(_._2))
 
       positiveMap.map { case (tag, positiveCases) => (tag, positiveCases, negativeMap.getOrElse(tag, Set())) }
-        .map { case (tag, pos, neg) => tag -> Seq(RegexString.applyNGram(pos, neg), RegexString.applyNGram(neg, pos)) }.toMap
+        .map { case (tag, pos, neg) => tag -> Seq(RegexString.applyNGram(this, pos, neg), RegexString.applyNGram(this, neg, pos)) }.toMap
 
     }
     else Map()
