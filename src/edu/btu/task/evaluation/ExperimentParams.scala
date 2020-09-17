@@ -258,9 +258,15 @@ class ExperimentParams extends Serializable {
 
   def loadSamples(samples: => Seq[TagSample]): Seq[TagSample] = {
     if (samplesBinaryExists()) {
-      println("")
-      val allsamples = loadObject[Seq[TagSample]](allSamplesFilename)
-      allsamples
+      try {
+        val allsamples = loadObject[Seq[TagSample]](allSamplesFilename)
+        if(allsamples!=null)  allsamples
+        else saveSamples(samples)
+      }catch{
+        case e:Exception => {
+          saveSamples(samples)
+        }
+      }
     }
     else {
       saveSamples(samples)
