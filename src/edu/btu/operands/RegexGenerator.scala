@@ -160,7 +160,8 @@ abstract class RegexGenerator(val experimentParams: ExperimentParams, val patter
     var crrRegexes = regexSet
     var ratio = 0.0
     var maxSize = trainingSamples.size
-    while (!crrSamples.isEmpty && !crrRegexes.isEmpty && ratio < experimentParams.matchSelectRatio) {
+    var mycontinue = true
+    while (!crrSamples.isEmpty && !crrRegexes.isEmpty && ratio < experimentParams.matchSelectRatio && mycontinue) {
 
       val (nextSet, nextSamples) = complementaryMatch(crrRegexes, crrSamples)
       if (crrSamples.size != nextSamples.size) {
@@ -168,6 +169,9 @@ abstract class RegexGenerator(val experimentParams: ExperimentParams, val patter
         mainSet ++= nextSet
         crrRegexes = crrRegexes -- nextSet
         crrSamples = nextSamples
+      }
+      else{
+        mycontinue = false
       }
 
     }
@@ -188,8 +192,9 @@ abstract class RegexGenerator(val experimentParams: ExperimentParams, val patter
     var crrRegexes = regexSet
     var ratio = 0.0
     var maxSize = trainingSamples.size
+    var mycontinue = true
 
-    while (!crrSamples.isEmpty && !crrRegexes.isEmpty && ratio < experimentParams.matchSelectRatio) {
+    while (!crrSamples.isEmpty && !crrRegexes.isEmpty && ratio < experimentParams.matchSelectRatio && mycontinue) {
       val (nextSet, nextSamples) = complementaryNotMatch(crrRegexes, crrSamples)
       if (crrSamples.size != nextSamples.size) {
 
@@ -197,7 +202,9 @@ abstract class RegexGenerator(val experimentParams: ExperimentParams, val patter
         mainSet ++= nextSet
         crrRegexes = crrRegexes -- nextSet
         crrSamples = nextSamples
-
+      }
+      else{
+        mycontinue = false
       }
 
     }
