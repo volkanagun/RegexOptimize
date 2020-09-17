@@ -88,10 +88,7 @@ class ExperimentParams extends Serializable {
   var excludedDomains = Seq[String]()
   var selectedDomains = Seq[String]()
   val paramsFilename = "resources/params.xml"
-
   var minimumPositiveSamples = 20
-
-
 
 
   def generationMapID(domainName: String, foldNum: Int): Int = {
