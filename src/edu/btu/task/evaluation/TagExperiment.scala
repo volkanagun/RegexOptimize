@@ -49,6 +49,9 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
   var recall:Double = 0.0
   var accuracy:Double = 0.0
   var fmeasure:Double = 0.0
+  var geometricMean:Double = 0.0
+  var falsepr:Double = 0.0
+  var falsenr:Double = 0.0
 
   var count = 0
   var foldResults = Seq[EvaluationResult]()
@@ -165,6 +168,33 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
     }
   }
 
+  def computeGeometricMean():Map[String, Double]={
+    tpCount.map { case (name, value) => {
+      val pSum = tpCount(name) + fnCount(name)
+      val rSum = fpCount(name) + tnCount(name)
+      val p  = (tpCount(name) + 1E-10) / (pSum+1E-10)
+      val r = (tnCount(name) + 1E-10) / (rSum+1E-10)
+      (name -> math.sqrt(p * r))
+    }}
+
+  }
+
+  def computeFalsePositiveRate():Map[String, Double]={
+    fpCount.map { case (name, value) => {
+      val negativeSum = fnCount(name) + tnCount(name)
+      (name, (value + 1E-10) / (negativeSum + 1E-10))
+    }}
+
+  }
+
+  def computeFalseNegativeRate():Map[String, Double]={
+    fnCount.map { case (name, value) => {
+      val positiveSum = tpCount(name) + fpCount(name)
+      (name, (value + 1E-10) / (positiveSum + 1E-10))
+    }}
+  }
+
+
   def computeFMeasure(precision: Map[String, Double], recall: Map[String, Double]): Map[String, Double] = {
     precision.map { case (name, prec) => {
       val rec = recall(name)
@@ -254,6 +284,9 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
       val precision = result.computePrecision()
       val recall = result.computeRecall()
       val fmeasure = result.computeFMeasure(precision, recall)
+      val fPR = result.computeFalsePositiveRate()
+      val fNR = result.computeFalseNegativeRate()
+      val gm = result.computeGeometricMean()
       val accuracy = result.computeAccuracy()
 
       val precisionValue = precision.head._2
@@ -285,6 +318,10 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
       prw.println(s"<RECALL>\n${recallValue}\n</RECALL>")
       prw.println(s"<FMEASURE>\n${fmeasureValue}\n</FMEASURE>")
       prw.println(s"<ACCURACY>\n${accuracyValue}\n</ACCURACY>")
+      prw.println(s"<FALSEPOSITIVERATE>\n${fPR}\n</FALSEPOSITIVERATE>")
+      prw.println(s"<FALSENEGATIVERATE>\n${fNR}\n</FALSENEGATIVERATE>")
+      prw.println(s"<FALSENEGATIVERATE>\n${gm}\n</FALSENEGATIVERATE>")
+
       prw.println("</DOMAIN>")
 
     }
@@ -297,6 +334,9 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
     val frecall = computeRecall()
     val ffmeasure = computeFMeasure(fprecision, frecall)
     val faccuracy = computeAccuracy()
+    val fPR = computeFalsePositiveRate()
+    val fNR = computeFalseNegativeRate()
+    val gm = computeGeometricMean()
 
     val precisionValue = fprecision.head._2
     val recallValue = frecall.head._2
@@ -307,6 +347,9 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
     prw.println(s"<RECALL>\n${recallValue}\n</RECALL>")
     prw.println(s"<FMEASURE>\n${fmeasureValue}\n</FMEASURE>")
     prw.println(s"<ACCURACY>\n${accuracyValue}\n</ACCURACY>")
+    prw.println(s"<FALSEPOSITIVERATE>\n${fPR}\n</FALSEPOSITIVERATE>")
+    prw.println(s"<FALSENEGATIVERATE>\n${fNR}\n</FALSENEGATIVERATE>")
+    prw.println(s"<GEOMETRIC>\n${gm}\n</GEOMETRIC>")
 
     prw.println(s"<COUNTS>\n")
 
@@ -348,7 +391,17 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
     val trecall = (summary \ "RECALL").text.trim
     val tfmeasure = (summary \ "FMEASURE").text.trim
     val taccuracy = (summary \ "ACCURACY").text.trim
+    val fpr = (summary \ "FALSEPOSITIVERATE").text.trim
+    val fnr = (summary \ "FALSENEGATIVERATE").text.trim
+    val geometric = (summary \ "GEOMETRIC").text.trim
     val counts = root \\ "COUNT"
+
+    /*
+      prw.println(s"<FALSEPOSITIVERATE>\n${fPR}\n</FALSEPOSITIVERATE>")
+    prw.println(s"<FALSENEGATIVERATE>\n${fNR}\n</FALSENEGATIVERATE>")
+    prw.println(s"<GEOMETRIC>\n${gm}\n</GEOMETRIC>")
+
+     */
 
     val countMap = counts.map(cntNode=> {
 
@@ -367,11 +420,15 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
     }).toMap
 
     val rmap = countMap ++ efnames
+
     experimentParams =  evalParams
     precision = tprecision.toDouble
     recall = trecall.toDouble
     accuracy = taccuracy.toDouble
     fmeasure = tfmeasure.toDouble
+    falsepr = fpr.toDouble
+    falsenr = fnr.toDouble
+    geometricMean = geometric.toDouble
     ratioCount = rmap
 
     this

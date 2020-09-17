@@ -59,26 +59,29 @@ object Main {
 
     val mainFolder = ExperimentParams.datasets
     var percentage = 0.0
-    var maxSize = maxRegexSizes.size * maxCombineSizes.size *  maxThresholds.size * topCounts.size
-    maxCombineSizes.foreach(maxCombineSize => {
-      println(s"CURRENT PROGRESS : ${percentage/maxSize}")
-      maxRegexSizes.foreach(maxRegexSize => {
-        println(s"CURRENT PROGRESS : ${percentage/maxSize}")
+
+    var maxSize = maxRegexSizes.size * maxCombineSizes.size * maxThresholds.size * topCounts.size
+
+    println(s"CURRENT PROGRESS : ${percentage / maxSize}")
+    maxRegexSizes.foreach(maxRegexSize => {
+      println(s"CURRENT PROGRESS : ${percentage / maxSize}")
+      topCounts.foreach(topCount => {
         maxThresholds.foreach { threshold => {
-          println(s"CURRENT PROGRESS : ${percentage/maxSize}")
-          topCounts.foreach(topCount => {
+          println(s"CURRENT PROGRESS : ${percentage / maxSize}")
+          maxCombineSizes.par.foreach(maxCombineSize => {
+
             new TagExperiment()
               .initParams(name, topCount, maxRegexSize, maxCombineSize, threshold)
               .evaluateNecessary(mainFolder)
               .summary()
 
-            percentage+= 1
-            println(s"CURRENT PROGRESS : ${percentage/maxSize}")
+            percentage += 1
+            println(s"CURRENT PROGRESS : ${percentage / maxSize}")
+
           })
-        }}
+        }
+        }
       })
     })
-
-
   }
 }
