@@ -20,7 +20,7 @@ object Main {
   def main(args: Array[String]): Unit = {
 
     //summarize(folder)
-    multiExperiment(ExperimentParams.singleApprox)
+    multiExperiment(ExperimentParams.singleExact)
 
   }
 

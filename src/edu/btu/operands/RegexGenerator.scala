@@ -161,6 +161,7 @@ abstract class RegexGenerator(val experimentParams: ExperimentParams, val patter
     var ratio = 0.0
     var maxSize = trainingSamples.size
     while (!crrSamples.isEmpty && !crrRegexes.isEmpty && ratio < experimentParams.matchSelectRatio) {
+
       val (nextSet, nextSamples) = complementaryMatch(crrRegexes, crrSamples)
       if (crrSamples.size != nextSamples.size) {
         ratio += (crrSamples.size - nextSamples.size).toDouble / maxSize
@@ -168,9 +169,7 @@ abstract class RegexGenerator(val experimentParams: ExperimentParams, val patter
         crrRegexes = crrRegexes -- nextSet
         crrSamples = nextSamples
       }
-      else {
-        crrRegexes = Set()
-      }
+
     }
 
     mainSet
@@ -200,9 +199,7 @@ abstract class RegexGenerator(val experimentParams: ExperimentParams, val patter
         crrSamples = nextSamples
 
       }
-      else {
-        crrRegexes = Set()
-      }
+
     }
 
     mainSet

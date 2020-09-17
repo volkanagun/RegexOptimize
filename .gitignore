@@ -1,3 +1,5 @@
 /resources/datasets/
 /target/
-/resources/
+/resources/binary/
+/resources/sources/
+/resources/htmls/
