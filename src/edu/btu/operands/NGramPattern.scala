@@ -1,5 +1,7 @@
 package edu.btu.operands
 
+import java.util.regex.Pattern
+
 import edu.btu.task.evaluation.{ExperimentParams, TimeBox}
 
 /**
@@ -62,9 +64,28 @@ class NGramMultiPattern(experimentParams: ExperimentParams, filterRatio: Double 
 
   override def generate(): Set[String] = {
     val positiveCases = positiveFilter.freqDictionary.toSeq.sortBy(_._2).reverse.take(count)
-      .map(_._1)
-
+      .map(_._1).map(item=> positiveFilter.clean(item))
+/*
+    val errors = testIf(positiveCases.toSet)
+    if(!errors.isEmpty){
+      val d = 0;
+    }*/
     positiveCases.toSet
+  }
+
+  def testIf(positiveSet:Set[String]):Set[String]={
+    val errorSet = positiveSet.filter(item=> {
+      try{
+        Pattern.compile(item)
+        false
+      }
+      catch{
+        case _ => true
+      }
+    })
+
+    errorSet
+
   }
 
   def generateOrRegex(nominalCases:Seq[String], preOp:String = ""):Set[String]={

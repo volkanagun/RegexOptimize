@@ -1,8 +1,11 @@
 package edu.btu.task.evaluation
 
-import java.io.{File, FileOutputStream, PrintWriter}
+import com.aliasi.classify.{Classification, Classified, DynamicLMClassifier, NaiveBayesClassifier}
+import com.aliasi.tokenizer.NGramTokenizerFactory
 
+import java.io.{File, FileOutputStream, PrintWriter}
 import edu.btu.operands.RegexGenerator
+import edu.btu.task.evaluation
 import edu.btu.task.tagmatch.{TagParser, TagSample}
 
 import scala.io.Source
@@ -30,9 +33,7 @@ case class TrainTest(var train: Seq[TagSample], var test: Seq[TagSample]) {
 
     trainAttrCount = trainingByDomain.flatMap(_._2).map(_.properties.groupBy(_._1).size).sum
     testAttrCount = testingByDomain.flatMap(_._2).map(_.properties.groupBy(_._1).size).sum
-
     this
-
   }
 }
 
@@ -45,17 +46,26 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
 
   var ratioCount = Map[String, Double]()
 
-  var precision:Double = 0.0
-  var recall:Double = 0.0
-  var accuracy:Double = 0.0
-  var fmeasure:Double = 0.0
-  var geometricMean:Double = 0.0
-  var falsepr:Double = 0.0
-  var falsenr:Double = 0.0
+  var precision: Double = 0.0
+  var recall: Double = 0.0
+  var accuracy: Double = 0.0
+  var fmeasure: Double = 0.0
+  var geometricMean: Double = 0.0
+  var falsepr: Double = 0.0
+  var falsenr: Double = 0.0
+  var generationEfficiency = 0.0
 
   var count = 0
   var foldResults = Seq[EvaluationResult]()
   var groupResults = Map[String, EvaluationResult]()
+
+  def initName(name:String):this.type ={
+    tpCount = tpCount.updated(name, 0)
+    fpCount = fpCount.updated(name, 0)
+    tnCount = tnCount.updated(name, 0)
+    fnCount = fnCount.updated(name, 0)
+    this
+  }
 
   def groupSummary(): this.type = {
     println("Group Summary")
@@ -67,6 +77,14 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
     }
 
     this
+  }
+
+  def generationTime(): Double = {
+    val namePair = ratioCount.filter(_._1.startsWith("generating"))
+    if (!namePair.isEmpty) namePair.head._2
+    else {
+      Double.MaxValue
+    }
   }
 
 
@@ -156,6 +174,7 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
       (name, (value + 1E-10) / (sum + 1E-10))
     }
     }
+
   }
 
   def computeRecall(): Map[String, Double] = {
@@ -168,39 +187,44 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
     }
   }
 
-  def computeGeometricMean():Map[String, Double]={
+  def computeGeometricMean(): Map[String, Double] = {
     tpCount.map { case (name, value) => {
       val pSum = tpCount(name) + fnCount(name)
       val rSum = fpCount(name) + tnCount(name)
-      val p  = (tpCount(name) + 1E-10) / (pSum+1E-10)
-      val r = (tnCount(name) + 1E-10) / (rSum+1E-10)
+      val p = (tpCount(name) + 1E-10) / (pSum + 1E-10)
+      val r = (tnCount(name) + 1E-10) / (rSum + 1E-10)
       (name -> math.sqrt(p * r))
-    }}
+    }
+    }
 
   }
 
-  def computeFalsePositiveRate():Map[String, Double]={
+  def computeFalsePositiveRate(): Map[String, Double] = {
     fpCount.map { case (name, value) => {
       val negativeSum = fnCount(name) + tnCount(name)
       (name, (value + 1E-10) / (negativeSum + 1E-10))
-    }}
+    }
+    }
 
   }
 
-  def computeFalseNegativeRate():Map[String, Double]={
+  def computeFalseNegativeRate(): Map[String, Double] = {
     fnCount.map { case (name, value) => {
       val positiveSum = tpCount(name) + fpCount(name)
       (name, (value + 1E-10) / (positiveSum + 1E-10))
-    }}
+    }
+    }
   }
 
 
   def computeFMeasure(precision: Map[String, Double], recall: Map[String, Double]): Map[String, Double] = {
+
     precision.map { case (name, prec) => {
       val rec = recall(name)
       (name, (2 * (prec * rec)) / (prec + rec))
     }
     }
+
   }
 
   def computeAccuracy(): Map[String, Double] = {
@@ -251,14 +275,14 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
     this
   }
 
-  def exists(): Boolean = {
-    val fname = "resources/evaluations/crr" + experimentParams.generationID() + ".xml"
+  def exists(folder: String = "resources/evaluations/"): Boolean = {
+    val fname = folder + "crr" + experimentParams.generationID() + ".xml"
     new File(fname).exists()
   }
 
-  def save(): this.type = {
+  def save(mainFolder: String = "resources/evaluations/"): this.type = {
     //save the results to folder in readable format
-    val fname = "resources/evaluations/crr" + experimentParams.generationID() + ".xml"
+    val fname = mainFolder + "crr" + experimentParams.generationID() + ".xml"
     val stream = new FileOutputStream(fname, false)
     val prw = new PrintWriter(stream)
     prw.println("<?xml version=\"1.0\" encoding=\"utf-8\"?>")
@@ -284,9 +308,9 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
       val precision = result.computePrecision()
       val recall = result.computeRecall()
       val fmeasure = result.computeFMeasure(precision, recall)
-      val fPR = result.computeFalsePositiveRate()
-      val fNR = result.computeFalseNegativeRate()
-      val gm = result.computeGeometricMean()
+      val fPR = result.computeFalsePositiveRate().head._2
+      val fNR = result.computeFalseNegativeRate().head._2
+      val gm = result.computeGeometricMean().head._2
       val accuracy = result.computeAccuracy()
 
       val precisionValue = precision.head._2
@@ -320,7 +344,7 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
       prw.println(s"<ACCURACY>\n${accuracyValue}\n</ACCURACY>")
       prw.println(s"<FALSEPOSITIVERATE>\n${fPR}\n</FALSEPOSITIVERATE>")
       prw.println(s"<FALSENEGATIVERATE>\n${fNR}\n</FALSENEGATIVERATE>")
-      prw.println(s"<FALSENEGATIVERATE>\n${gm}\n</FALSENEGATIVERATE>")
+      prw.println(s"<GEOMETRIC>\n${gm}\n</GEOMETRIC>")
 
       prw.println("</DOMAIN>")
 
@@ -334,9 +358,9 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
     val frecall = computeRecall()
     val ffmeasure = computeFMeasure(fprecision, frecall)
     val faccuracy = computeAccuracy()
-    val fPR = computeFalsePositiveRate()
-    val fNR = computeFalseNegativeRate()
-    val gm = computeGeometricMean()
+    val fPR = computeFalsePositiveRate().head._2
+    val fNR = computeFalseNegativeRate().head._2
+    val gm = computeGeometricMean().head._2
 
     val precisionValue = fprecision.head._2
     val recallValue = frecall.head._2
@@ -359,13 +383,14 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
     prw.println("<COUNT LABEL=\"" + experimentParams.fileDomainRatio + "\" VALUE=\"" + ratioCount.getOrElse(experimentParams.fileDomainRatio, 0.0) + "\"/>")
     prw.println("<COUNT LABEL=\"" + experimentParams.fileSampleRatio + "\" VALUE=\"" + ratioCount.getOrElse(experimentParams.fileSampleRatio, 0.0) + "\"/>")
 
-    /*prw.println("<COUNT LABEL=\"POSITIVE\" VALUE=\"" + totalPositiveCount + "\"/>")
+
+    prw.println("<COUNT LABEL=\"POSITIVE\" VALUE=\"" + totalPositiveCount + "\"/>")
     prw.println("<COUNT LABEL=\"NEGATIVE\" VALUE=\"" + totalNegativeCount + "\"/>")
     prw.println("<COUNT LABEL=\"FILE COUNT\" VALUE=\"" + totalFileCount + "\"/>")
     prw.println("<COUNT LABEL=\"FILE SAMPLE RATIO\" VALUE=\"" + totalFileSampleRatio + "\"/>")
     prw.println("<COUNT LABEL=\"FILE DOMAIN RATIO\" VALUE=\"" + totalFileDomainRatio + "\"/>")
     prw.println("<COUNT LABEL=\"SAMPLE SIZE\" VALUE=\"" + totalSampleCount + "\"/>")
-    prw.println("<COUNT LABEL=\"SAMPLE DOMAIN RATIO\" VALUE=\"" + totalSampleDomainRatio + "\"/>")*/
+    prw.println("<COUNT LABEL=\"SAMPLE DOMAIN RATIO\" VALUE=\"" + totalSampleDomainRatio + "\"/>")
 
     prw.println(s"</COUNTS>\n")
     prw.println("</SUMMARY>")
@@ -379,9 +404,8 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
   }
 
 
-  def load(fname:String): EvaluationResult = {
+  def load(fname: String): EvaluationResult = {
     //save the results to folder in readable format
-
     val root = XML.load(fname)
 
     val summary = (root \\ "SUMMARY").head
@@ -403,7 +427,7 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
 
      */
 
-    val countMap = counts.map(cntNode=> {
+    val countMap = counts.map(cntNode => {
 
       val name = (cntNode \ "@LABEL").text.trim
       val value = (cntNode \ "@VALUE").text.trim.toDouble
@@ -411,17 +435,15 @@ case class EvaluationResult(var experimentParams: ExperimentParams) {
 
     }).toMap
 
-    val efnames = (root \ "EFFICINECY" \ "NAME").map(node=> {
-
+    val efnames = (root \ "EFFICIENCY" \ "NAME").map(node => {
       val name = (node \ "@VALUE").text.trim
       val average = ((node \ "AVERAGE") \ "@MILISECONDS").text.trim.toDouble
       (name -> average)
-
     }).toMap
 
     val rmap = countMap ++ efnames
 
-    experimentParams =  evalParams
+    experimentParams = evalParams
     precision = tprecision.toDouble
     recall = trecall.toDouble
     accuracy = taccuracy.toDouble
@@ -529,15 +551,19 @@ class TagExperiment(var experimentParams: ExperimentParams = ExperimentParams())
     this
   }
 
-  def initParams(name: String, topCount: Int, maxRegexSize: Int, maxCombineSize: Int, threshold:Double): this.type = {
-    experimentParams = ExperimentParams.loadXML()
+  def initParams(experimentParams: ExperimentParams): this.type = {
+    this.experimentParams = experimentParams
+    this
+  }
+
+  def initParams(name: String, topCount: Int, maxRegexSize: Int, maxCombineSize: Int, threshold: Double): this.type = {
+    experimentParams = new ExperimentParams().loadXML()
     experimentParams.experimentCycle = Array(name)
     experimentParams.topCount = topCount
     experimentParams.maxCombineSize = maxCombineSize
     experimentParams.maxRegexSize = maxRegexSize
     experimentParams.maxPaths = maxCombineSize * maxRegexSize
     experimentParams.matchSelectRatio = threshold
-
     this
   }
 
@@ -805,7 +831,7 @@ class TagExperiment(var experimentParams: ExperimentParams = ExperimentParams())
   //override negatives rather than positives because there are more samples
 
   def isCloseBigger(test: Double, main: Double): Boolean = {
-    test >= (main - 1E-1000)
+    test >= (main - 1E-50)
   }
 
   def evaluateMatch(name: String, decideAverage: (Double, Double), positives: Map[String, Set[String]], negatives: Map[String, Set[String]], testingSet: Set[TagSample]): EvaluationResult = {
@@ -814,12 +840,12 @@ class TagExperiment(var experimentParams: ExperimentParams = ExperimentParams())
     val avgPos = decideAverage._1
 
     val foundAverages = testingSet.map(sp => (sp, sp.matchWithNegative(positives, negatives)))
-    val foundPositiveMatches = foundAverages.filter { case (_, (pos, neg)) => isCloseBigger(pos, avgPos) /*|| (pos > neg && neg < avgNeg)*/}.map(_._1)
-    val foundNegativeMatches = foundAverages.filter { case (_, (pos, neg)) => isCloseBigger(neg, avgNeg) /*|| neg >= pos*/}.map(_._1) -- foundPositiveMatches
+    val foundPositiveMatches = foundAverages.filter { case (_, (pos, neg)) => pos > neg }.map(_._1)
+    //val foundNegativeMatches = foundAverages.filter { case (_, (pos, neg)) => isCloseBigger(neg, pos) /*|| neg >= pos*/}.map(_._1) -- foundPositiveMatches
 
     val positiveResults = foundPositiveMatches
     /* -- foundNegativeMatches*/
-    val negativeResults = foundNegativeMatches -- foundPositiveMatches
+    val negativeResults = testingSet -- foundPositiveMatches
 
     //true positives
     val tp = testingSet.filter(!_.isNegative).filter(positiveResults.contains(_))
@@ -827,7 +853,6 @@ class TagExperiment(var experimentParams: ExperimentParams = ExperimentParams())
 
     val tn = testingSet.filter(_.isNegative).filter(ts => negativeResults.contains(ts))
     val fn = testingSet.filter(!_.isNegative).filter(ts => negativeResults.contains(ts))
-
 
     EvaluationResult(experimentParams)
       .inc(testingSet.size)
@@ -849,7 +874,14 @@ class TagExperiment(var experimentParams: ExperimentParams = ExperimentParams())
   def evaluate(domainName: String, mainResult: EvaluationResult, trainTest: => TrainTest, foldNum: Int): this.type = {
     println(s"Evaluating training dataset")
 
-    evaluate(domainName, mainResult, trainTest.train.toSet, trainTest.test.toSet, foldNum)
+    if(experimentParams.isNaive()){
+      val name = "evaluation-naive-bayes"
+      val subResult = evaluateNaive(name, trainTest.train.toSet,  trainTest.test.toSet)
+      mainResult.append(subResult)
+    }
+    else {
+      evaluate(domainName, mainResult, trainTest.train.toSet, trainTest.test.toSet, foldNum)
+    }
     this
   }
 
@@ -888,21 +920,86 @@ class TagExperiment(var experimentParams: ExperimentParams = ExperimentParams())
     avgPos
   }
 
-  def evaluate(domainName: String, mainResult: EvaluationResult, trainingSet: Set[TagSample], testingSet: Set[TagSample], foldNum: Int): this.type = {
+  def evaluateNaive(domainName: String, trainingSet: => Set[TagSample], testingSet: Set[TagSample]): EvaluationResult = {
+    val CATEGORIES = Array[String]("POSITIVE", "NEGATIVE")
 
-    val regexGenMap0 = experimentParams.regexGenerator(trainingSet).toArray
-    val regexGenMap1 = experimentParams.combineGenerator(regexGenMap0)
-    val regexGenMap = experimentParams.loadGenerator(experimentParams.filterGenerator(regexGenMap1), experimentParams.generationMapID(domainName, foldNum), true)
+    val classifier: NaiveBayesClassifier = new NaiveBayesClassifier(CATEGORIES, new NGramTokenizerFactory(experimentParams.ngramLength, experimentParams.maxNgramLength));
+    //training
+    for (sample <- trainingSet) {
+
+      if (!sample.isNegative) {
+        val anonym  = () =>  {
+          val str = sample.toString
+          val classification = new Classification (CATEGORIES (0) )
+          val classified = new Classified[CharSequence] (str, classification)
+          classifier.handle (classified)
+          0
+        }
+
+        TimeBox.measureTime[Int](domainName, anonym())
+      }
+
+
+      if (sample.isNegative) {
+        val anonym = () => {
+          val classification = new Classification(CATEGORIES(1))
+          val classified = new Classified[CharSequence](sample.toString, classification)
+          classifier.handle(classified)
+          0
+        }
+        TimeBox.measureTime[Int](domainName, anonym())
+      }
+    }
+
+    //testing
+    TimeBox.measureTime[EvaluationResult](domainName, testingSet.size.toLong, evaluateNaive(domainName, classifier, testingSet))
+
+  }
+
+  def evaluateNaive(name:String, classifier:NaiveBayesClassifier, testingSet:Set[TagSample]): EvaluationResult ={
+
+      val evalResult = EvaluationResult(experimentParams).initName(name)
+      for (sample <- testingSet) {
+        val jointClassification = classifier.classify(sample.toString)
+        val positiveScore = jointClassification.score(0)
+        val negativeScore = jointClassification.score(1)
+
+        if (positiveScore > negativeScore && !sample.isNegative) {
+          evalResult.incTP("evaluation-naive-bayes")
+        }
+        else if (positiveScore > negativeScore && sample.isNegative) {
+          evalResult.incFP("evaluation-naive-bayes")
+        }
+        else if (positiveScore < negativeScore && sample.isNegative) {
+          evalResult.incTN("evaluation-naive-bayes")
+        }
+        else if (positiveScore < negativeScore && !sample.isNegative) {
+          evalResult.incFN("evaluation-naive-bayes")
+        }
+      }
+
+    evalResult
+
+  }
+
+  def evaluate(domainName: String, mainResult: EvaluationResult, trainingSet: => Set[TagSample], testingSet: Set[TagSample], foldNum: Int): this.type = {
+
+    lazy val regexGenMap0 = experimentParams.regexGenerator(trainingSet).toArray
+    lazy val regexGenMap1 = experimentParams.combineGenerator(regexGenMap0)
+    val regexGenMap = experimentParams.loadGenerator(experimentParams.filterGenerator(regexGenMap1), experimentParams.samplesMapID(domainName, foldNum), true)
 
     //val regexTest = regexGenMap.head._2.head.generate()
 
-    val trainingMap = regexGenMap.map { case (name, regexGenerators) => {
+    val trainingMap = regexGenMap.par.map {
+      case (name, regexGenerators) => {
 
-      val regexStrings = regexGenerators.map(gen => gen.generateTimely())
-        .filter(!_.isEmpty)
-      (name -> regexStrings)
-    }
-    }.filter { case (name, set) => !set.isEmpty }.toMap
+        val regexStrings = regexGenerators.map(gen => gen.generateTimely())
+          .filter(!_.isEmpty)
+        (name -> regexStrings)
+      }
+    }.filter {
+      case (name, set) => !set.isEmpty
+    }.toArray.toMap
 
     val eval = if (experimentParams.isSingle()) {
       val name = "evaluation-single-regex"
@@ -911,8 +1008,9 @@ class TagExperiment(var experimentParams: ExperimentParams = ExperimentParams())
       evaluateTraining(mainResult, regexGenMap)
       evaluateMatchTimely(name, trainDecide, positiveMap, testingSet)
     }
+
     else {
-      val name = "evaluation-multi-regex"
+      val name = (if (experimentParams.experimentCycle.contains(ExperimentParams.multiRandom)) "evaluating-random-regex" else "evaluation-multi-regex")
       val positiveMap = trainingMap.mapValues(_.head)
       val negativeMap = trainingMap.mapValues(_.last)
       val positiveSamples = trainingSet.filter(!_.isNegative)
@@ -928,20 +1026,22 @@ class TagExperiment(var experimentParams: ExperimentParams = ExperimentParams())
     this
   }
 
-  def summary(): EvaluationResult = {
+  def summary(mainFolder: String): EvaluationResult = {
     val finalResult = EvaluationResult(experimentParams)
 
-    if (!finalResult.exists()) {
-      evaluationResult.foreach { case (domainName, evalResult) => {
-        finalResult.appendDirect(evalResult)
-        finalResult.appendNormalizedTraining(evalResult, evaluationResult.size)
-        finalResult.append(domainName, evalResult)
-      }
+    if (!finalResult.exists(mainFolder)) {
+      evaluationResult.foreach {
+        case (domainName, evalResult) => {
+          finalResult.appendDirect(evalResult)
+          finalResult.appendNormalizedTraining(evalResult, evaluationResult.size)
+          finalResult.append(domainName, evalResult)
+        }
       }
 
       finalResult.groupSummary()
       finalResult.summary()
-      finalResult.save()
+      finalResult.save(mainFolder)
+
     }
 
     finalResult
@@ -953,10 +1053,14 @@ class TagExperiment(var experimentParams: ExperimentParams = ExperimentParams())
     domainSampleMap = domainMap
     domainFileMap = domainMap.mapValues(samples => samples.map(_.filename).distinct)
 
-    fileSampleMap = domainMap.toArray.flatMap { case (name, samples) => samples.map(sample => sample) }
+    fileSampleMap = domainMap.toArray.flatMap {
+      case (name, samples) => samples.map(sample => sample)
+    }
       .groupBy(sample => sample.filename).mapValues(_.toSeq)
 
-    totalSampleCount = domainSampleMap.flatMap { case (name, seq) => seq }.size
+    totalSampleCount = domainSampleMap.flatMap {
+      case (name, seq) => seq
+    }.size
     totalFileCount = fileSampleMap.size
     totalDomainCount = domainMap.size
     relevantCount = domainMap.flatMap(_._2).filter(!_.isNegative).size
@@ -964,8 +1068,8 @@ class TagExperiment(var experimentParams: ExperimentParams = ExperimentParams())
 
   }
 
-  def evaluateNecessary(folder: String): this.type = {
-    if (!EvaluationResult(experimentParams).exists()) evaluate(folder)
+  def evaluateNecessary(evalFolder: String, folder: String): this.type = {
+    if (!EvaluationResult(experimentParams).exists(evalFolder)) evaluate(folder)
     else println("Evaluation is skipped...")
     this
   }
@@ -978,27 +1082,38 @@ class TagExperiment(var experimentParams: ExperimentParams = ExperimentParams())
     lazy val mainsamples = experimentParams.loadSamples(readCSVFolder(folder).allsamples)
 
     val domainsamples = if (experimentParams.excludedDomains.isEmpty && experimentParams.selectedDomains.isEmpty) mainsamples.groupBy(_.domain)
-    else if (experimentParams.selectedDomains.isEmpty) mainsamples.groupBy(_.domain).filter { case (domainName, _) => !experimentParams.excludedDomains.exists(selectedName => domainName.contains(selectedName)) }
-    else if (experimentParams.excludedDomains.isEmpty) mainsamples.groupBy(_.domain).filter { case (domainName, _) => experimentParams.selectedDomains.exists(selectedName => domainName.contains(selectedName)) }
-    else mainsamples.groupBy(_.domain).filter { case (domainName, _) => experimentParams.selectedDomains.exists(selectedName => domainName.contains(selectedName)) && !experimentParams.excludedDomains.exists(selectedName => domainName.contains(selectedName)) }
-
-    val filtersamples = domainsamples.filter { case (name, seq) => {
-      val pp = seq.filter(_.isNegative)
-      val ss = seq.filter(!_.isNegative)
-      pp.length >= experimentParams.minimumPositiveSamples && ss.length >= experimentParams.k * 2
+    else if (experimentParams.selectedDomains.isEmpty) mainsamples.groupBy(_.domain).filter {
+      case (domainName, _) => !experimentParams.excludedDomains.exists(selectedName => domainName.contains(selectedName))
     }
+    else if (experimentParams.excludedDomains.isEmpty) mainsamples.groupBy(_.domain).filter {
+      case (domainName, _) => experimentParams.selectedDomains.exists(selectedName => domainName.contains(selectedName))
+    }
+    else mainsamples.groupBy(_.domain).filter {
+      case (domainName, _) => experimentParams.selectedDomains.exists(selectedName => domainName.contains(selectedName)) && !experimentParams.excludedDomains.exists(selectedName => domainName.contains(selectedName))
+    }
+
+    val filtersamples = domainsamples.filter {
+      case (name, seq) => {
+        val pp = seq.filter(_.isNegative)
+        val ss = seq.filter(!_.isNegative)
+        pp.length >= experimentParams.minimumPositiveSamples && ss.length >= experimentParams.k * 2
+      }
     }
 
     val randomsamples = Random.shuffle(filtersamples)
 
     updateCounts(filtersamples)
-    println(s"Number of domains: ${randomsamples.size}")
+    println(s"Number of domains: ${
+      randomsamples.size
+    }")
 
     evaluationResult = randomsamples.par.map {
 
       case (domainName, ccsamples) => {
 
-        println(s"Evaluating domain: ${domainName}")
+        println(s"Evaluating domain: ${
+          domainName
+        }")
 
         val trainTestSeq = crossvalidate(experimentParams.k, ccsamples, experimentParams.maxSamples)
 
@@ -1013,10 +1128,11 @@ class TagExperiment(var experimentParams: ExperimentParams = ExperimentParams())
         mainEval.setRatioBy(experimentParams.fileDomainRatio, totalFileCount.toDouble / totalDomainCount)
         mainEval.setRatioBy(experimentParams.fileSampleRatio, totalSampleCount / totalFileCount)
 
-        trainTestSeq.zipWithIndex.foreach { case (trainTest, foldNum) => {
-          lazy val ntt = buildSamples(trainTest)
-          evaluate(domainName, mainEval, ntt, foldNum)
-        }
+        trainTestSeq.zipWithIndex.foreach {
+          case (trainTest, foldNum) => {
+            lazy val ntt = buildSamples(trainTest)
+            evaluate(domainName, mainEval, ntt, foldNum)
+          }
         }
 
         (domainName -> mainEval)
@@ -1032,7 +1148,9 @@ class TagExperiment(var experimentParams: ExperimentParams = ExperimentParams())
 
     thisSamples.groupBy(_.domain).foreach {
       case (domain, samples) => {
-        println(s"Splitting dataset for cross-validation of ${k}")
+        println(s"Splitting dataset for cross-validation of ${
+          k
+        }")
         val positives = samples.filter(!_.isNegative).take(maxSize)
         val negatives = samples.filter(_.isNegative).take(maxSize)
         val posDist = positives.length.toDouble / k
@@ -1064,7 +1182,6 @@ class TagExperiment(var experimentParams: ExperimentParams = ExperimentParams())
 
   def crossvalidateAll(k: Int, crrDomainSamples: Seq[TagSample]): Seq[TrainTest] = {
 
-
     //consider positives and negatives
     var crrSamples = crrDomainSamples
     val splitSize = crrDomainSamples.size / k
@@ -1081,12 +1198,10 @@ class TagExperiment(var experimentParams: ExperimentParams = ExperimentParams())
     var trainTestSeq = Seq[TrainTest]()
 
     for (i <- 0 until splitSeqs.size) {
-
       val newRange = rangeFull - i
       val trainSeq = splitSeqs(i)
       val testSeq = newRange.flatMap(splitSeqs(_)).toSeq
       trainTestSeq :+= TrainTest(trainSeq, testSeq)
-
     }
 
     trainTestSeq

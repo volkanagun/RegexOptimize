@@ -38,6 +38,11 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
     this
   }
 
+  def regexify(): this.type = {
+    cells = cells.map(_.regexify())
+    this
+  }
+
   def searchCost(cell: Cell): Double = {
     val sourceNode = cell.source
     val targetNode = cell.target
@@ -444,8 +449,8 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
       else if (crrCell.matching == 1) {
 
         val newOr = prevParam.or + "|" + Regexify.toOrRegex(newParam.prevCell.source, newParam.prevCell.target)
-        val newSource = prevParam.sourceContinue + newParam.prevCell.source.matchGroup
-        val newTarget = prevParam.targetContinue + newParam.prevCell.target.matchGroup
+        val newSource = prevParam.sourceContinue + newParam.prevCell.source.getMatchGroup()
+        val newTarget = prevParam.targetContinue + newParam.prevCell.target.getMatchGroup()
 
         newParam.setOr(newOr)
           .setSource(newSource)
@@ -459,12 +464,12 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
         toRegex(cells.tail, newParam)
       }
       else if (crrCell.matching == 3) {
-        val newOptional = prevParam.optional + newParam.prevCell.source.matchGroup
+        val newOptional = prevParam.optional + newParam.prevCell.source.getMatchGroup()
         newParam.setOptional(newOptional)
         toRegex(cells.tail, newParam)
       }
       else if (crrCell.matching == 4) {
-        val newOptional = prevParam.optional + newParam.prevCell.target.matchGroup
+        val newOptional = prevParam.optional + newParam.prevCell.target.getMatchGroup()
         newParam.setOptional(newOptional)
         toRegex(cells.tail, newParam)
       }
@@ -505,8 +510,8 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
       else if (prevParam.prevCell.matching == 1 && newParam.prevCell.matching == 1) {
 
         val newOr = prevParam.or + "|" + Regexify.toOrRegex(newParam.prevCell.source, newParam.prevCell.target)
-        val newSource = prevParam.sourceContinue + newParam.prevCell.source.matchGroup
-        val newTarget = prevParam.targetContinue + newParam.prevCell.target.matchGroup
+        val newSource = prevParam.sourceContinue + newParam.prevCell.source.getMatchGroup()
+        val newTarget = prevParam.targetContinue + newParam.prevCell.target.getMatchGroup()
 
         newParam.setOr(newOr)
           .setSource(newSource)
@@ -621,8 +626,8 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
       else if (crrCell.matching == 1) {
 
         val newOr = prevParam.or + "|" + Regexify.toOrExactRegex(newParam.prevCell.source, newParam.prevCell.target)
-        val newSource = prevParam.sourceContinue + newParam.prevCell.source.matchGroup
-        val newTarget = prevParam.targetContinue + newParam.prevCell.target.matchGroup
+        val newSource = prevParam.sourceContinue + newParam.prevCell.source.getMatchGroup()
+        val newTarget = prevParam.targetContinue + newParam.prevCell.target.getMatchGroup()
 
         newParam.setOr(newOr)
           .setSource(newSource)
@@ -637,12 +642,12 @@ case class Path(var cells: Seq[Cell] = Seq(), var cost: Double = 0d) extends Ser
         toRegex(cells.tail, newParam)
       }
       else if (crrCell.matching == 3) {
-        val newOptional = prevParam.optional + newParam.prevCell.source.matchGroup
+        val newOptional = prevParam.optional + newParam.prevCell.source.getMatchGroup()
         newParam.setOptional(newOptional)
         toRegex(cells.tail, newParam)
       }
       else if (crrCell.matching == 4) {
-        val newOptional = prevParam.optional + newParam.prevCell.target.matchGroup
+        val newOptional = prevParam.optional + newParam.prevCell.target.getMatchGroup()
         newParam.setOptional(newOptional)
         toRegex(cells.tail, newParam)
       }

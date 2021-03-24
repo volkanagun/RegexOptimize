@@ -4,84 +4,184 @@ import java.io.File
 
 object Main {
 
+  case class EvalKey(count: Int, paths: Int, ratio: Double, foldername: String, eval: EvaluationResult) {
+    override def hashCode(): Int = {
+      var r = 3;
+      r = r * 7 + count
+      r = r * 7 + paths
+      r = r * 7 + ratio.hashCode()
+      r = r * 7 + eval.experimentParams.maxCombineSize
+      r = r * 7 + eval.experimentParams.maxMultiDepth
+      r
+    }
+
+    override def equals(obj: Any): Boolean = {
+      if (obj.isInstanceOf[EvalKey]) {
+        val robj = obj.asInstanceOf[EvalKey]
+        val rmatchSelectRatio  = robj.eval.experimentParams.matchSelectRatio
+        val rmaxCombineSize  = robj.eval.experimentParams.maxCombineSize
+        val rmaxPaths  = robj.eval.experimentParams.maxPaths
+        val rtopCount  = robj.eval.experimentParams.topCount
+        //val rmultiDepth  = robj.eval.experimentParams.maxMultiDepth
+
+        val cmatchSelectRatio  = eval.experimentParams.matchSelectRatio
+        val cmaxCombineSize  = eval.experimentParams.maxCombineSize
+        val cmaxPaths  = eval.experimentParams.maxPaths
+        val ctopCount  = eval.experimentParams.topCount
+        //val cmultiDepth  = eval.experimentParams.maxMultiDepth
+
+        rmatchSelectRatio == cmatchSelectRatio &&
+          rmaxCombineSize == cmaxCombineSize &&
+          rmaxPaths == cmaxPaths &&
+          rtopCount == ctopCount
+      }
+      else {
+        false
+      }
+    }
+  }
 
   val accepted = Array[String]()
-  var topCounts = Array(5, 10, 20, 50, 100, 200, 400)
-  val maxRegexSizes = Array(1, 2, 3, 5, 10, 20, 50)
-  val maxCombineSizes = Array(3, 20, 50)
-  val maxThresholds = Array(0.2, 0.5, 0.7, 0.9)
-  val folder = "resources/evaluations/backupv1/"
+  var topCounts = Array(5 /*, 10 , 20,50, 100, 200,500*/)
+  val maxRegexSizes = Array(/*1, 2 , 3, 5, 10, */20/*, 50, 100*/)
+  val maxCombineSizes = Array(/*1, 3 , */20/*, 50*/)
+  val maxThresholds = Array(/*0.2, 0.5 , */0.6/*, 0.7, 0.9*/)
+  val experimentParams = ExperimentParams.loadXML()
 
-  ExperimentParams.loadXML()
-  ExperimentParams.ngramLength = 5
-  ExperimentParams.matchSelectRatio = 0.8
-  ExperimentParams.saveXML()
+  experimentParams.ngramLength = 3
+  experimentParams.maxNgramLength = 7
+
+  experimentParams.matchSelectRatio = 0.9
+  experimentParams.patternFilterRatio = 0.0
+  experimentParams.maxCombineSize = 20
+  experimentParams.maxRegexSize = 5
+  experimentParams.topCount = 500
+  experimentParams.maxMultiDepth = 3
+  experimentParams.experimentCycle = Array(ExperimentParams.naiveBayes)
+  experimentParams.saveXML()
 
   def main(args: Array[String]): Unit = {
-
-    //summarize(folder)
-    multiExperiment(ExperimentParams.singleExact)
-
+    //multiExperimentNGram(ExperimentParams.multiNGRAM)
+    //multiExperiment(ExperimentParams.singleApprox)
+    //multiExperiment(ExperimentParams.singleExact)
+    //multiExperiment(ExperimentParams.multiApprox)
+    /*multiExperiment(ExperimentParams.multiExact)
+    multiExperiment(ExperimentParams.multiNGRAM)
+    multiExperiment(ExperimentParams.singleNGRAM)*/
+    singleExperiment("naive-bayes")
   }
 
   def singleExperiment(): Unit = {
-
     val mainFolder = ExperimentParams.datasets
-    new TagExperiment().initParams()
+    new TagExperiment().initParams(experimentParams)
       .evaluate(mainFolder)
-      .summary()
-
+      .summary("resources/evaluations/")
   }
 
-  def summarize(folder: String): Unit = {
+  def singleExperiment(name:String): Unit = {
+    val mainFolder = ExperimentParams.datasets
+    val realEvalFolder = "resources/evaluations/" + name.toLowerCase + "/";
 
-    val list = new File(folder).listFiles().map(f => EvaluationResult(null).load(f.getAbsolutePath))
-      .map(eval => {
-        (eval.experimentParams.topCount, eval.experimentParams.maxPaths, eval)
-      })
-      .sortWith { case ((tcount1, psize1, _), (tcount2, psize2, _)) => {
-        tcount1 < tcount2 || (tcount1 == tcount2 && psize1 < psize2)
-      }
-      }
-      .map(_._3)
-
-    println(s"Evaluation Folder ${folder}")
-    list.foreach(eval => {
-      println(s"Generation ID: ${eval.experimentParams.generationID()}")
-      println(s"Top count: ${eval.experimentParams.topCount} and Path size: ${eval.experimentParams.maxPaths}")
-      println(s"Precision: ${eval.precision} Recall: ${eval.recall}  Accuracy:${eval.accuracy}")
-      println(s"Counts:\n${eval.ratioCount.map { case (name, value) => "--->" + name + ":" + value }.mkString("\n")}")
-    })
-
+    new TagExperiment().initParams(experimentParams)
+      .evaluate(mainFolder)
+      .summary(realEvalFolder)
   }
+
 
   def multiExperiment(name: String): Unit = {
 
     val mainFolder = ExperimentParams.datasets
     var percentage = 0.0
+    val realEvalFolder = "resources/evaluations/" + name.toLowerCase + "/";
+
+    var p1Array = maxRegexSizes.flatMap(r => maxCombineSizes.map(c => (r, c)))
+    var p2Array = maxThresholds.flatMap(t => topCounts.map(c => (t, c)))
+    val paramsArray = p1Array.flatMap(p1 => p2Array.map(p2 => (p1._1, p1._2, p2._1, p2._2)))
 
     var maxSize = maxRegexSizes.size * maxCombineSizes.size * maxThresholds.size * topCounts.size
 
     println(s"CURRENT PROGRESS : ${percentage / maxSize}")
-    maxRegexSizes.foreach(maxRegexSize => {
+    println(s"SIZE : ${maxSize}")
+
+    paramsArray.foreach(param => {
+
+      val (maxRegexSize, maxCombineSize, threshold, topCount) = param;
+
+      println(s"TOP COUNT: ${topCount}")
+
+      new TagExperiment()
+        .initParams(name, topCount, maxRegexSize, maxCombineSize, threshold)
+        .evaluateNecessary(realEvalFolder, mainFolder)
+        .summary(realEvalFolder)
+
+      percentage += 1
       println(s"CURRENT PROGRESS : ${percentage / maxSize}")
+
+    })
+
+
+    /*maxRegexSizes.foreach(maxRegexSize => {
+
+      println(s"CURRENT PROGRESS : ${percentage / maxSize}")
+
       topCounts.foreach(topCount => {
+
+        println(s"TOP COUNT: ${topCount}")
+
         maxThresholds.foreach { threshold => {
+
           println(s"CURRENT PROGRESS : ${percentage / maxSize}")
+
           maxCombineSizes.par.foreach(maxCombineSize => {
+            println(s"Parameters:\n   MaxRegexSize:${maxRegexSize}\n   MaxCombineSize: ${maxCombineSize}\n   TopCount:${topCount}\n   Threshold:${threshold}")
 
             new TagExperiment()
               .initParams(name, topCount, maxRegexSize, maxCombineSize, threshold)
-              .evaluateNecessary(mainFolder)
-              .summary()
+              .evaluateNecessary(realEvalFolder, mainFolder)
+              .summary(realEvalFolder)
 
             percentage += 1
             println(s"CURRENT PROGRESS : ${percentage / maxSize}")
-
           })
         }
         }
       })
-    })
+    })*/
+
   }
+
+  def multiExperimentNGram(name: String): Unit = {
+
+    val mainFolder = ExperimentParams.datasets
+    val realEvalFolder = "resources/" + name + "/";
+    var percentage = 0.0
+
+    var maxSize = maxRegexSizes.size * maxCombineSizes.size * maxThresholds.size * topCounts.size
+
+    println(s"CURRENT PROGRESS : ${percentage / maxSize}")
+    println(s"SIZE : ${maxSize}")
+    topCounts.foreach(topCount => {
+
+      println(s"CURRENT PROGRESS : ${percentage / maxSize}")
+
+      maxThresholds.foreach { threshold => {
+
+        println(s"CURRENT PROGRESS : ${percentage / maxSize}")
+
+
+        println(s"Parameters:\n   TopCount:${topCount}\n   Threshold:${threshold}")
+
+        new TagExperiment()
+          .initParams(name, topCount, 10, 10, threshold)
+          .evaluateNecessary(realEvalFolder, mainFolder)
+          .summary(realEvalFolder)
+
+        percentage += 1
+        println(s"CURRENT PROGRESS : ${percentage / maxSize}")
+      }
+      }
+    }
+    )
+  }
+
 }

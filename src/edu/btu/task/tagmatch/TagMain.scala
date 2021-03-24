@@ -146,7 +146,7 @@ object TagParser extends TagParser {
     val names = lines.head.split("(\\s+|\\t+)").filter(nm => !(nm.contains("theImg") || nm.contains("Parent1") || nm.contains("Parent2")))
     val regex = "((\"?)\\<(.*?)\\>(\"?))"
 
-    lines.tail.zipWithIndex.flatMap { case (line, index) => {
+    lines.par.tail.zipWithIndex.flatMap { case (line, index) => {
 
       val linem = line.replaceAll("(\\/)?>", ">")
       val imageLines = regex.r.findAllIn(linem).toArray
@@ -184,7 +184,7 @@ object TagParser extends TagParser {
         Some(TagSample(tag, filename, domain, negative))
 
       }
-    }}.toSeq
+    }}.toArray.toSeq
 
   }
 

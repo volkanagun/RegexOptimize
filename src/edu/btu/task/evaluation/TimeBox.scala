@@ -61,6 +61,12 @@ object TimeBox {
 
     result += "\n</EFFICIENCY>"
     result
+
+  }
+
+  def generationAvg():Double={
+    val namePair = timeMap.filter(_._1.startsWith("generating")).head
+    namePair._2.toDouble / countMap(namePair._1)
   }
 }
 

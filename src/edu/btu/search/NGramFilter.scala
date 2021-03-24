@@ -9,10 +9,10 @@ class NGramFilter(var patternFilterRatio:Double) extends Serializable {
   //multiple regular expressions
   //generate most common expressions as n-gram dictionary
   //filter expressions by those common n-grams/ extract regex
+
   var freqDictionary = Map[String, Int]()
   var stepSize = ExperimentParams.ngramStepLength;
   var sliceSize = ExperimentParams.ngramLength;
-
   var topCount = 50;
 
   def setTopCount(count:Int):this.type={
@@ -47,7 +47,9 @@ class NGramFilter(var patternFilterRatio:Double) extends Serializable {
 
   def clean(item:String):String={
     item.replaceAll("\"", "")
-      .replaceAll("\\d","1").replaceAll("\\p{Punct}","!")
+      .replaceAll("[¢Ã„â]","x")
+      .replaceAll("\\d","1")
+      .replaceAll("\\p{Punct}","!")
   }
 
   //accept an attribute value as representative
@@ -92,7 +94,6 @@ class NGramFilter(var patternFilterRatio:Double) extends Serializable {
   def commonSet(excludeFilter:Map[String, Int]):Set[String]={
     freqDictionary.filter{case(item, _)=> !excludeFilter.contains(item)}.toSeq.sortBy(_._2).reverse.map(_._1).take(topCount).toSet
   }
-
 
 }
 

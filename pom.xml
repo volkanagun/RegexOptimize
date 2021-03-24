@@ -57,6 +57,14 @@
 
     <dependencies>
 
+        <!-- https://mvnrepository.com/artifact/de.julielab/aliasi-lingpipe -->
+        <dependency>
+            <groupId>de.julielab</groupId>
+            <artifactId>aliasi-lingpipe</artifactId>
+            <version>4.1.0</version>
+        </dependency>
+
+
         <!-- https://mvnrepository.com/artifact/org.scala-lang.modules/scala-xml -->
         <dependency>
             <groupId>org.scala-lang.modules</groupId>

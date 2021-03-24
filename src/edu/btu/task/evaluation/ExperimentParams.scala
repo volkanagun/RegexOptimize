@@ -9,9 +9,11 @@ import scala.xml.{NodeSeq, XML}
 
 class ExperimentParams extends Serializable {
 
+  val naiveBayes = "NAIVE-BAYES"
   val singleExact = "SINGLE-EXACT"
   val singleApprox = "SINGLE-APPROX"
   val multiExact = "MULTI-EXACT"
+  val multiRandom = "MULTI-RANDOM"
   val multiApprox = "MULTI-APPROX"
   val singleNGRAM = "SINGLE-NGRAM"
   val multiNGRAM = "MULTI-NGRAM"
@@ -46,6 +48,7 @@ class ExperimentParams extends Serializable {
   var maxRegexSize = 5
   //number of search paths increase for better accuracy
   var maxPaths = maxCombineSize * maxRegexSize
+  var maxNegativePaths = 1
   //shuffle seeds
   var shuffleSeed = 1711
   var shuffleSeed2 = 171178
@@ -63,13 +66,14 @@ class ExperimentParams extends Serializable {
   //the ratio of common n-gram dictionary patterns for the sample
   //accept or reject the positive or negative sample pattern for n-grams
   //increasing it will reduce the number of patterns
-  var patternFilterRatio: Double = 0.5
+  var patternFilterRatio: Double = 0.0
   //take n-gram samples count (top counted ngram patterns) (topCount)
 
   //increase it for better accuracy
   //decrease it for better efficiency
   var topCount = 100
   var ngramLength = 7
+  var maxNgramLength = 7
   //number of generalized patterns
   var rndElemLength = 4
   var ngramStepLength = 1
@@ -88,7 +92,7 @@ class ExperimentParams extends Serializable {
   var excludedDomains = Seq[String]()
   var selectedDomains = Seq[String]()
   val paramsFilename = "resources/params.xml"
-  var minimumPositiveSamples = 20
+  var minimumPositiveSamples = 0
 
 
   def generationMapID(domainName: String, foldNum: Int): Int = {
@@ -110,6 +114,25 @@ class ExperimentParams extends Serializable {
     r = 3 * r + selectedDomains.hashCode()
     r = 3 * r + minimumPositiveSamples
     r = 3 * r + rndElemLength
+    r
+
+  }
+
+  def samplesMapID(domainName: String, foldNum: Int): Int = {
+
+    var r = 1
+    r = 3 * r + foldNum
+    r = 3 * r + ngramLength
+    r = 3 * r + ngramStepLength
+    r = 3 * r + topCount
+    r = 3 * r + patternFilterRatio.hashCode()
+    r = 3 * r + maxMultiDepth.hashCode()
+
+    r = 3 * r + k
+    r = 3 * r + domainName.hashCode
+    r = 3 * r + experimentCycle.toSeq.hashCode()
+    r = 3 * r + excludedDomains.hashCode()
+    r = 3 * r + selectedDomains.hashCode()
     r
 
   }
@@ -141,12 +164,12 @@ class ExperimentParams extends Serializable {
 
   }
 
+
+
   def saveXML(): this.type = {
     val rootOpen = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
       "<ROOT>\n"
     val params = paramsXML().split("\\n").filter(line => !line.contains("MAX_PATH")).mkString("\n")
-
-
     val all = rootOpen + params + "\n</ROOT>"
 
     new PrintWriter(paramsFilename) {
@@ -162,6 +185,7 @@ class ExperimentParams extends Serializable {
     val xmlDoc = XML.load(paramsFilename)
     val elem = (xmlDoc \\ "PARAMETERS").head
     val params = elem \\ "PARAM"
+
     params.foreach(item => {
       val attr = item.attribute("NAME").get.head.text
       val value = item.attribute("VALUE").get.head.text
@@ -183,7 +207,6 @@ class ExperimentParams extends Serializable {
       else if (attr.equals("MIN_POS_SAMPLES")) minimumPositiveSamples = value.toInt
       else if (attr.equals("RND_GROUPING_SIZE")) rndElemLength = value.toInt
       else {}
-
     })
 
     maxPaths = maxCombineSize * maxRegexSize
@@ -220,6 +243,7 @@ class ExperimentParams extends Serializable {
   }
 
   def paramsXML(): String = {
+
     "<PARAMETERS>\n" +
       "<!--max paths is equal to maxCombineSize * maxRegexSize-->\n" +
       "<PARAM NAME=\"MAX_COMBINE_SIZE\" VALUE=\"" + maxCombineSize + "\"/>\n" +
@@ -304,6 +328,7 @@ class ExperimentParams extends Serializable {
     catch {
       case _ => {
         println("Error in filename: " + filename)
+        new File(filename).delete();
         null
       }
     }
@@ -413,6 +438,22 @@ class ExperimentParams extends Serializable {
       posMap
 
     }*/
+    else if (experimentCycle.contains(multiRandom)) {
+
+      val positiveSamples = training.filter(!_.isNegative)
+      val negativeSamples = training.filter(_.isNegative)
+
+      val posMap = positiveSamples.flatMap(tg => tg.positiveRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
+        .groupBy(_._1).mapValues(_.map(_._2))
+      val negMap = negativeSamples.flatMap(tg => tg.negativeRegex.multimap.flatMap { case (tag, set) => set.map(item => tag -> item) })
+        .groupBy(_._1).mapValues(_.map(_._2))
+
+      //generate two regexes for positive and negative
+      posMap.map { case (tag, positiveCases) => (tag, positiveCases, negMap.getOrElse(tag, Set())) }
+        .map { case (tag, pos, neg) => tag -> Seq(RegexString.applyRandom(this, pos, neg), RegexString.applyRandom(this, neg, pos)) }
+        .toMap
+
+    }
     else if (experimentCycle.contains(multiExact)) {
 
       val positiveSamples = training.filter(!_.isNegative)
@@ -474,8 +515,13 @@ class ExperimentParams extends Serializable {
     experimentCycle.contains(singleApprox) || experimentCycle.contains(singleExact) || experimentCycle.contains(regexSingle) || experimentCycle.contains(singleNGRAM)
   }
 
+  def isNaive():Boolean={
+    experimentCycle.contains(naiveBayes)
+  }
+
+
 }
 
 object ExperimentParams extends ExperimentParams {
-  def apply(): ExperimentParams = new ExperimentParams()
+  def apply(): ExperimentParams = new ExperimentParams().loadXML()
 }

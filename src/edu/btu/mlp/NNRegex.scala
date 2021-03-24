@@ -15,4 +15,11 @@ class NNRegex {
   //create a second model with the heuristic you developed
 
 
+  //only use text to tag ratio no any other element information for determination
+  //extract the embeddings of the template
+  //use the embeddings to determine the content by guided options
+  //extract the content by generating regex if necessary
+
+
+
 }

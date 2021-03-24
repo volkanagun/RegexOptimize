@@ -11,13 +11,18 @@ class TagSample(override val tagName: String, override val properties: Seq[(Stri
   var isNegative: Boolean = false
   val ngramFilter = NGramFilter()
 
-
   var psMap = properties.map { case (k, v) => k -> ngramFilter.clean(v) }.toMap
 
   def regexBinCount(regex:String, propertyValue:String):Double ={
     val sz = regex.r.findAllIn(propertyValue).size
     if(sz >= 2) 2.0
     else if(sz >= 1) 1.0
+    else 0.0
+  }
+
+ def regexBinBinary(regex:String, propertyValue:String):Double ={
+    val sz = regex.r.findAllIn(propertyValue).size
+    if(sz > 0) 1.0
     else 0.0
   }
 
@@ -41,27 +46,27 @@ class TagSample(override val tagName: String, override val properties: Seq[(Stri
   //should not match any of negative
   def matchWithNegative(regexPositive: Map[String, Set[String]], regexNegative: Map[String, Set[String]], defaultValue: Boolean = true): (Double, Double) = {
 
-    var count = 1
-    var nocount = 1
-    var size = 1
-    var nosize = 1
-
-
+    var count = 1.0
+    var nocount = 1.0
+    var size = 1.0
+    var nosize = 1.0
 
     regexPositive.foreach { case (item, regexSet) => {
       if(psMap.contains(item)) {
         val propertyValue = psMap(item)
-        count += regexSet.map(regex => regex.r.findAllIn(propertyValue).size).sum
+        count += regexSet.map(regex => regexBinBinary(regex, propertyValue)).sum
+        size += regexSet.size
       }
-      size += regexSet.size
+
     }}
 
     regexNegative.foreach { case (item, regexSet) => {
       if(psMap.contains(item)) {
         val propertyValue = psMap(item)
-        nocount += regexSet.map(regex => regex.r.findAllIn(propertyValue).size).sum
+        nocount += regexSet.map(regex => regexBinBinary(regex, propertyValue)).sum
+        nosize += regexSet.size
       }
-      nosize += regexSet.size
+
     }}
 
     val yesmatch = count.toDouble/size + 1E-13

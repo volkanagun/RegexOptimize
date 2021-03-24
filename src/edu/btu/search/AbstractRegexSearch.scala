@@ -83,6 +83,12 @@ abstract class AbstractRegexSearch() extends Serializable {
     this
   }
 
+  def setPositive(samples: Seq[String]): this.type = {
+    val sources = samples.flatMap(regexify(_).map(_.elems))
+    positives = sources
+    this
+  }
+
   def addPositive(samples: Seq[String]): this.type = {
     val sources = samples.flatMap(regexify(_).map(_.elems))
     positives ++= sources
@@ -107,6 +113,13 @@ abstract class AbstractRegexSearch() extends Serializable {
     this
   }
 
+  def setNegative(samples: Seq[String]): this.type = {
+    val sources = samples.flatMap(regexify(_).map(_.elems))
+    negatives = sources
+    this
+  }
+
+
   def addNegative(samples: Seq[String]): this.type = {
     val sources = samples.flatMap(regexify(_).map(_.elems))
     negatives ++= sources
@@ -121,8 +134,8 @@ abstract class AbstractRegexSearch() extends Serializable {
   }
 
   def setNegative(samples: Set[String]): this.type = {
-    negatives = Seq[Seq[RegexNodeIndex]]()
-    addNegative(samples)
+    val sources = samples.flatMap(regexify(_).map(_.elems)).toSeq
+    negatives = sources
     this
   }
 
@@ -481,28 +494,22 @@ abstract class AbstractRegexSearch() extends Serializable {
   protected def searchMultiDirectional(regexNodes: Seq[Seq[RegexNodeIndex]], maxSinglePath:Int,  crrDepth: Int = 1) : Seq[Path] = {
 
     val random = new Random(19)
-    val minMax = math.max(regexNodes.length, 1)
+    val nodies = random.shuffle(regexNodes)
 
-    val sourceIndices = Range(0, minMax)
-      .map { index => random.nextInt(regexNodes.length) }
+    val allpaths = nodies.sliding(2, 2).map(nodes=> {
+      val src = nodes.head
+      val dst = nodes.last
+      pathBinning(searchDirectional(Path(), src, dst, 0, 0))
+    }).flatMap(paths => paths.sortBy(_.cost))
+      .toArray
 
-    val targetIndices = Range(0, regexNodes.length)
-      .filter(!sourceIndices.contains(_))
-
-    val sourceSeq = sourceIndices.map(i => regexNodes(i))
-    val targetSeq = targetIndices.map(i => regexNodes(i))
-
-    val sourceTargets = sourceSeq.flatMap(pos1 => targetSeq.map(pos2 => (pos1, pos2)))
-
-    val allpaths = sourceTargets.flatMap { case (src, trt) => {
-      pathBinning(searchDirectional(Path(), src, trt, 0, 0))
-    }}
-
-    if (allpaths.length <= 2 || crrDepth == ExperimentParams.maxMultiDepth || allpaths.length > regexNodes.length) {
+    if (allpaths.length <= 2 || crrDepth == ExperimentParams().maxMultiDepth) {
       allpaths.sortBy(_.cost).take(maxSinglePath)
     }
     else {
-      val nodes = sortTakeConstruct(allpaths)
+      //coin
+      val simplifiedPaths = allpaths.map(_.simplify().regexify())
+      val nodes = simplifiedPaths.map{path =>  construct(path)}
       searchMultiDirectional(nodes, maxSinglePath, crrDepth + 1)
     }
 
@@ -513,10 +520,14 @@ abstract class AbstractRegexSearch() extends Serializable {
       .take(2*ExperimentParams.maxPaths)
   }
 
-  def sortTakeConstruct(paths: Seq[Path]): Seq[Seq[RegexNodeIndex]] = {
+  def sortTakeConstruct(paths: Seq[Path], maxPaths:Int): Seq[Seq[RegexNodeIndex]] = {
     paths.sortBy(_.cost)
-      .take(2 * ExperimentParams.maxPaths)
+      .take(maxPaths)
       .map(path => Seq(path.toOrRegex().constructRegexNode()))
+  }
+
+  def construct(path: Path): Seq[RegexNodeIndex] = {
+    Seq(path.toOrRegex().constructRegexNode())
   }
 
   def searchRegex(paths: Seq[Path]): Seq[String] = {

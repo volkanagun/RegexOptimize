@@ -33,6 +33,7 @@ class RegexParam extends Serializable {
       val newRegexNode = createRegexNode()
       regexStack = regexStack.push(newRegexNode)
       changeCount = 0
+
       true
     }
     else false
@@ -357,7 +358,7 @@ class RegexParam extends Serializable {
 
   def combineByOrder(mainNode: RegexNodeIndex, newNode: RegexNodeIndex): RegexNodeIndex = {
 
-    if (mainNode.isTarget == newNode.isTarget && mainNode.maxDex > newNode.maxDex) {
+    if (mainNode.isTarget == newNode.isTarget && mainNode.maxDex > newNode.maxDex && !mainNode.isOptional()) {
       newNode.combineNode(mainNode)
     }
     else {

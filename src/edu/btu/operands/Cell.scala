@@ -172,15 +172,15 @@ case class Cell(var i: Int, var j: Int, var source: RegexNodeIndex = null, var t
     if (matching == 0 && (source.elems.length > 1 || target.elems.length > 1)) {
       val min = math.min(source.elems.length, target.elems.length)
       val max = math.max(source.elems.length, target.elems.length)
-      if (min == max) source.matchGroup + "{" + min + "}"
-      else if (max > min) source.matchGroup + "{" + min + "," + max + "}"
-      else source.matchGroup + "+"
+      if (min == max) source.getMatchGroup() + "{" + min + "}"
+      else if (max > min) source.getMatchGroup() + "{" + min + "," + max + "}"
+      else source.getMatchGroup() + "+"
     }
     else if (matching == 0) {
-      source.matchGroup
+      source.getMatchGroup()
     }
-    else if (matching == 1) source.matchGroup + "|" + target.matchGroup
-    else if (matching == 2) source.matchGroup + "(" + target.matchGroup + "?)"
+    else if (matching == 1) source.getMatchGroup() + "|" + target.getMatchGroup()
+    else if (matching == 2) source.getMatchGroup() + "(" + target.getMatchGroup() + "?)"
     else ""
 
   }
@@ -190,8 +190,8 @@ case class Cell(var i: Int, var j: Int, var source: RegexNodeIndex = null, var t
     if (matching == 0 && (source.elems.length > 1 || target.elems.length > 1)) {
       val min = math.min(source.elems.length, target.elems.length)
       val max = math.max(source.elems.length, target.elems.length)
-      if (min == max) source.matchGroup + "{" + min + "}"
-      else if (max > min) source.matchGroup + "{" + min + "," + max + "}"
+      if (min == max) source.getMatchGroup() + "{" + min + "}"
+      else if (max > min) source.getMatchGroup() + "{" + min + "," + max + "}"
       else source.matchValue + "+"
     }
     else if (matching == 0) {
@@ -207,15 +207,15 @@ case class Cell(var i: Int, var j: Int, var source: RegexNodeIndex = null, var t
     if (matching == 0) {
       val min = math.min(math.min(source.elems.length, target.elems.length), mmin)
       val max = math.max(math.max(source.elems.length, target.elems.length), mmax)
-      if (min == max) source.matchGroup + "{" + min + "}"
-      else if (max > min) source.matchGroup + "{" + min + "," + max + "}"
-      else source.matchGroup + "+"
+      if (min == max) source.getMatchGroup() + "{" + min + "}"
+      else if (max > min) source.getMatchGroup() + "{" + min + "," + max + "}"
+      else source.getMatchGroup() + "+"
     }
     else if (matching == 0) {
-      source.matchGroup
+      source.getMatchGroup()
     }
-    else if (matching == 1) source.matchGroup + "|" + target.matchGroup
-    else if (matching == 2) source.matchGroup + "(" + target.matchGroup + "?)"
+    else if (matching == 1) source.getMatchGroup() + "|" + target.getMatchGroup()
+    else if (matching == 2) source.getMatchGroup() + "(" + target.getMatchGroup() + "?)"
     else ""
   }
 
@@ -225,15 +225,15 @@ case class Cell(var i: Int, var j: Int, var source: RegexNodeIndex = null, var t
     if (matching == 0) {
       val min = math.min(math.min(source.elems.length, target.elems.length), mmin)
       val max = math.max(math.max(source.elems.length, target.elems.length), mmax)
-      if (min == max) source.matchGroup + "{" + min + "}"
-      else if (max > min) source.matchGroup + "{" + min + "," + max + "}"
-      else source.matchGroup + "+"
+      if (min == max) source.getMatchGroup() + "{" + min + "}"
+      else if (max > min) source.getMatchGroup() + "{" + min + "," + max + "}"
+      else source.getMatchGroup() + "+"
     }
     else if (matching == 0) {
-      source.matchGroup
+      source.getMatchGroup()
     }
-    else if (matching == 1) source.matchGroup + "|" + target.matchValue
-    else if (matching == 2) source.matchGroup + "(" + target.matchValue + "?)"
+    else if (matching == 1) source.getMatchGroup() + "|" + target.matchValue
+    else if (matching == 2) source.getMatchGroup() + "(" + target.matchValue + "?)"
     else ""
 
   }

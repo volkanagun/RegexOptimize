@@ -11,7 +11,7 @@ class MultiPositiveApprox() extends AbstractRegexSearch() {
   }
 
   override def searchNegative(): Seq[Path] = {
-    TimeBox.measureTime[Seq[Path]]("approx-multi-negative", searchMultiDirectional(negatives, ExperimentParams.maxPaths))
+    TimeBox.measureTime[Seq[Path]]("approx-multi-negative", searchMultiDirectional(negatives, ExperimentParams.maxNegativePaths))
   }
 
   override def regexify(value: String): Seq[RegexNodeIndex] = {

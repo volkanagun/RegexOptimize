@@ -1,7 +1,8 @@
 package edu.btu.operands
 
 import edu.btu.task.evaluation.{ExperimentParams, TimeBox}
-import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveExact, NGramFilter, SinglePositiveApprox, SinglePositiveExact}
+import edu.btu.search.{AbstractRegexSearch, MultiPositiveApprox, MultiPositiveExact, NGramFilter, RandomizedSearch, SinglePositiveApprox, SinglePositiveExact}
+
 import scala.util.Random
 
 class RegexSingleString(experimentParams: ExperimentParams, val regexSearch: AbstractRegexSearch, override val patternFilterRatio: Double = 0.0, val count: Int = 20) extends RegexGenerator(experimentParams, patternFilterRatio, count) {
@@ -61,6 +62,40 @@ class RegexSingleString(experimentParams: ExperimentParams, val regexSearch: Abs
 
 }
 
+class RegexRandomString(experimentParams: ExperimentParams, filterRatio: Double = 0.0, count: Int = 20) extends RegexGenerator(experimentParams, filterRatio, count) {
+
+  val regexSearch: AbstractRegexSearch = new RandomizedSearch()
+
+  def generateTimely(): Set[String] = {
+    System.out.println("Generating multi-random-regex...")
+    val set = TimeBox.measureTime[Set[String]]("generating-regex-random", generate())
+    filterTimely(set)
+  }
+
+  def filterTimely(set: Set[String]): Set[String] = {
+    TimeBox.measureTime[Set[String]]("filtering-regex-random", filter(set))
+  }
+
+  def generate(): Set[String] = {
+
+    val regexes = regexSearch.setPositive(positives)
+      .setNegative(negatives)
+      .sizeControl()
+      .searchNegativeRegex()
+
+    regexes
+
+  }
+
+  def filter(set: Set[String]): Set[String] = {
+    val posSet = filterMatch(set, positives)
+    val negSet = filterNotMatch(set, negatives)
+
+    posSet.intersect(negSet)
+  }
+}
+
+
 class RegexMultiString(experimentParams: ExperimentParams, val regexSearch: AbstractRegexSearch, filterRatio: Double = 0.0, count: Int = 20) extends RegexGenerator(experimentParams, filterRatio, count) {
 
   def generateTimely(): Set[String] = {
@@ -79,7 +114,7 @@ class RegexMultiString(experimentParams: ExperimentParams, val regexSearch: Abst
       .addNegative(negatives)
       .sizeControl()
       .searchNegativeRegex()
-      .toSet
+
 
     regexes
 
@@ -100,6 +135,10 @@ object RegexString {
     new RegexSingleString(experimentParams, search, ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives)
   }
 
+  def applyRandom(experimentParams: ExperimentParams, positives: Set[String], negatives:Set[String]):RegexGenerator={
+    new RegexRandomString(experimentParams, ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives).addNegatives(negatives)
+  }
+
   def apply(experimentParams: ExperimentParams, positives: Set[String], negatives:Set[String], search: AbstractRegexSearch):RegexGenerator={
     new RegexMultiString(experimentParams, search, ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives).addNegatives(negatives)
   }
@@ -109,7 +148,7 @@ object RegexString {
   }
 
   def applyExactAdaptive(experimentParams: ExperimentParams, positives: Set[String]): RegexGenerator = {
-    if (positives.head.length > 20) {}
+
     new RegexSingleString(experimentParams, new SinglePositiveExact(), ExperimentParams.patternFilterRatio, ExperimentParams.topCount).addPositives(positives)
   }
 

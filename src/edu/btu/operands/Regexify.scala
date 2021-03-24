@@ -59,10 +59,10 @@ object Regexify {
   def toOrRegex(source: RegexNodeIndex, target: RegexNodeIndex): String = {
 
     if (source.equalsByValue(target)) source.matchValue
-    else if (source.equalsByGroup(target)) source.matchGroup
-    else if (source.canMatch(target)) source.matchGroup
-    else if (target.canMatch(source)) target.matchGroup
-    else source.matchGroup + "|" + target.matchGroup
+    else if (source.equalsByGroup(target)) source.getMatchGroup()
+    else if (source.canMatch(target)) source.getMatchGroup()
+    else if (target.canMatch(source)) target.getMatchGroup()
+    else source.getMatchGroup() + "|" + target.getMatchGroup()
   }
 
   def toOrNode(indice: Int): RegexNodeIndex = {
@@ -169,12 +169,12 @@ object Regexify {
   def groupSimplify(regexNodeIndex: RegexNodeIndex): RegexNodeIndex = {
 
     if (regexNodeIndex.isEmpty()) {
-      regexNodeIndex.matchValue = regexNodeIndex.matchGroup
+      regexNodeIndex.matchValue = regexNodeIndex.getMatchGroup()
     }
     else if (!regexNodeIndex.isEmpty()) {
       regexNodeIndex.elems.foreach(groupSimplify(_))
-      regexNodeIndex.matchGroup = regexNodeIndex.matchGroup + s"{${regexNodeIndex.elems.length}}"
-      regexNodeIndex.matchValue = regexNodeIndex.matchGroup
+      regexNodeIndex.setMatchGroup(regexNodeIndex.getMatchGroup() + s"{${regexNodeIndex.elems.length}}")
+      regexNodeIndex.setMatchValue(regexNodeIndex.getMatchGroup())
     }
 
     regexNodeIndex
@@ -185,12 +185,13 @@ object Regexify {
 
     if (!regexNodeIndex.isEmpty()) {
 
-      val matchingElems = regexNodeIndex.elems.takeWhile(elem => elem.matchValue.matches(regexNodeIndex.matchGroup) && elem.opName().equals(regexNodeIndex.opName()))
+      val matchingElems = regexNodeIndex.elems.takeWhile(elem => elem.matchValue.matches(regexNodeIndex.getMatchGroup()) && elem.opName().equals(regexNodeIndex.opName()))
+
       if (!matchingElems.isEmpty) {
 
         val nnode = RegexNodeIndex(regexNodeIndex.maxDex, RegexOp(regexNodeIndex.regexOp.name), matchingElems)
 
-        nnode.setMatchGroup(regexNodeIndex.matchGroup + s"{${matchingElems.length}}")
+        nnode.setMatchGroup(regexNodeIndex.getMatchGroup() + s"{${matchingElems.length}}")
         nnode.setMatchTxt(matchingElems.map(_.matchTxt).mkString(""))
 
         val nelems = nnode +: regexNodeIndex.elems.filter(elem => !matchingElems.contains(elem))
@@ -207,25 +208,27 @@ object Regexify {
 
         regexNodeIndex.setMatchValue(nmatchValue)
         regexNodeIndex.setMatchGroup(nmatchValue)
-
       }
 
     }
     else {
-      regexNodeIndex.matchValue = regexNodeIndex.matchGroup
+      regexNodeIndex.setMatchValue(regexNodeIndex.getMatchGroup())
     }
-    regexNodeIndex.elems.foreach(subelem => subelem.setMatchValue(subelem.matchGroup))
+
+    regexNodeIndex.elems.foreach(subelem => subelem.setMatchValue(subelem.getMatchGroup()))
     regexNodeIndex
 
   }
 
   def constructByCount(elems: Seq[RegexNodeIndex], matchGroup: String): RegexNodeIndex = {
+
     val nxtMatch = elems.map(_.matchTxt).mkString("")
     val nxtValue = elems.map(_.matchValue).mkString("")
     val nregexOp = RegexOp(Regexify.seq, elems.length)
     RegexNodeIndex(0, nregexOp, elems).setMatchTxt(nxtMatch)
       .setMatchGroup(matchGroup)
       .setMatchValue(nxtValue)
+
   }
 
 
@@ -294,7 +297,7 @@ object Regexify {
     breaking.breakable {
       while (i < elems.length) {
 
-        val crrGroup = elems(i).matchGroup
+        val crrGroup = elems(i).getMatchGroup()
         var count = 0;
         var j = i + 1;
         var nxtTxt: String = null
@@ -507,6 +510,7 @@ object Regexify {
 
   def randomize(regex: String, repeat: Int): Set[String] = {
     var seq = Set[String](regex)
+
     for (i <- 0 until repeat) {
       var result = randomize(regex)
       seq += result
@@ -519,7 +523,6 @@ object Regexify {
     var newregex = regex;
     groupings.foreach(crr => {
       newregex = replace(newregex, crr)
-
     })
 
     newregex
@@ -564,6 +567,11 @@ object Regexify {
   }
 
 
+  def cleanIrregular(regex:String) : String ={
+    val mregex = regex.replaceAll("\\|\\?","?")
+    mregex
+  }
+
   def toRegex(regexNodeIndex: RegexNodeIndex): (String, String, String) = {
 
     regexNodeIndex match {
@@ -579,7 +587,6 @@ object Regexify {
         val elems = node.elems
 
         if (opname != null && elems.length > 0) {
-
           if (opname.equals(seq)) {
             toRegex(elems, opname)
           }
@@ -591,10 +598,10 @@ object Regexify {
           else throw new Exception(s"Operation group not found for group: ${opname} and value: ${opname}")
         }
         else if (opname.equals(negate) && !matchValue.startsWith("(?!")) {
-          (s"(?!${matchValue})", s"(?!${matchGroup})", s"(?!${matchTxt})")
+          (s"(?!${cleanIrregular(matchValue)})", s"(?!${matchGroup})", s"(?!${matchTxt})")
         }
         else {
-          (matchValue, matchGroup, matchTxt)
+          (cleanIrregular(matchValue), cleanIrregular(matchGroup), matchTxt)
         }
       }
     }

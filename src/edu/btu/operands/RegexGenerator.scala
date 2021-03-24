@@ -121,7 +121,7 @@ abstract class RegexGenerator(val experimentParams: ExperimentParams, val patter
     this
   }
 
-  def filter(ridmap:Map[Int, Set[String]],regexArray:Array[String], trainingSamples:Set[String]):(Set[String], Set[String])={
+  def filter(ridmap: Map[Int, Set[String]], regexArray: Array[String], trainingSamples: Set[String]): (Set[String], Set[String]) = {
     val arr = ridmap.flatMap(crr => ridmap.map(nxt => (crr, nxt))).filter { case (p1, p2) => p1._1 != p2._1 }.map { case (p1, p2) => {
       (p1._1, p2._1, p1._2.union(p2._2))
     }
@@ -148,29 +148,26 @@ abstract class RegexGenerator(val experimentParams: ExperimentParams, val patter
 
   //compute tp/fp/tn/fn for each regex
   def filterMatch(regexSet: Set[String], trainingSamples: Set[String]): Set[String] = {
-    /*val counts = regexSet.map(regex=> (regex, trainingSamples.count(value=> value.matches(regex))))
-    val sum = trainingSamples.size
-
-    val fregexes = counts.filter{case(regex,cnt)=> cnt.toDouble/sum >= experimentParams.matchSelectRatio}
-    evalMatch(fregexes,regexSet.size, trainingSamples.size)
-    fregexes.map(_._1)*/
 
     var mainSet = Set[String]()
     var crrSamples = trainingSamples
     var crrRegexes = regexSet
     var ratio = 0.0
-    var maxSize = trainingSamples.size
+    var maxSize = crrSamples.size
     var mycontinue = true
+
     while (!crrSamples.isEmpty && !crrRegexes.isEmpty && ratio < experimentParams.matchSelectRatio && mycontinue) {
 
       val (nextSet, nextSamples) = complementaryMatch(crrRegexes, crrSamples)
-      if (crrSamples.size != nextSamples.size) {
-        ratio += (crrSamples.size - nextSamples.size).toDouble / maxSize
+      val crrRatio = (crrSamples.size - nextSamples.size).toDouble / maxSize
+
+      if (crrRatio > 0.0) {
+        ratio += crrRatio
         mainSet ++= nextSet
         crrRegexes = crrRegexes -- nextSet
         crrSamples = nextSamples
       }
-      else{
+      else {
         mycontinue = false
       }
 
@@ -180,29 +177,25 @@ abstract class RegexGenerator(val experimentParams: ExperimentParams, val patter
   }
 
   def filterNotMatch(regexSet: Set[String], trainingSamples: Set[String]): Set[String] = {
-    /* val counts = regexSet.map(regex=> (regex, trainingSamples.count(value=> !value.matches(regex))))
-     val sum = counts.map(_._2).sum
-
-     val fregexes = counts.filter{case(regex,cnt)=> cnt.toDouble/sum >  experimentParams.matchSelectRatio}
-     evalNotMatch(fregexes,regexSet.size, trainingSamples.size)
-     fregexes.map(_._1)*/
-
     var mainSet = Set[String]()
     var crrSamples = trainingSamples
     var crrRegexes = regexSet
     var ratio = 0.0
-    var maxSize = trainingSamples.size
+    var maxSize = crrSamples.size
     var mycontinue = true
 
     while (!crrSamples.isEmpty && !crrRegexes.isEmpty && ratio < experimentParams.matchSelectRatio && mycontinue) {
+
       val (nextSet, nextSamples) = complementaryNotMatch(crrRegexes, crrSamples)
-      if (crrSamples.size != nextSamples.size) {
-        ratio += (crrSamples.size - nextSamples.size).toDouble / maxSize
+      val crrRatio = (crrSamples.size - nextSamples.size).toDouble / maxSize
+
+      if (crrRatio > 0.0) {
+        ratio += crrRatio
         mainSet ++= nextSet
         crrRegexes = crrRegexes -- nextSet
         crrSamples = nextSamples
       }
-      else{
+      else {
         mycontinue = false
       }
 
@@ -326,6 +319,4 @@ abstract class RegexGenerator(val experimentParams: ExperimentParams, val patter
     println(s"Match ratio: ${count.map(_._2).sum.toDouble / sequences.length}")
 
   }
-
-
 }

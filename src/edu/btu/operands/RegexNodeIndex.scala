@@ -8,7 +8,7 @@ case class RegexNodeIndex(var maxDex: Int, var regexOp: RegexOp, var elems: Seq[
 
   var matchTxt = ""
   var matchValue = ""
-  var matchGroup = ""
+  private var matchGroup = ""
   var sindex = 0
   var minDex = 0
   var fixedHash = -1
@@ -16,8 +16,13 @@ case class RegexNodeIndex(var maxDex: Int, var regexOp: RegexOp, var elems: Seq[
   var isTarget = false
 
 
+
   regexOp.setContainer(this)
 
+
+  def getMatchGroup():String={
+    matchGroup
+  }
 
   def setNegate(doNegate: Boolean = false): this.type = {
     this.notNode = doNegate
@@ -420,7 +425,7 @@ case class RegexNodeIndex(var maxDex: Int, var regexOp: RegexOp, var elems: Seq[
   }
 
   def setMatchGroup(matchGroup: String): this.type = {
-    this.matchGroup = matchGroup
+    this.matchGroup= cleanIrregular(matchGroup)
     this
   }
 
@@ -430,7 +435,12 @@ case class RegexNodeIndex(var maxDex: Int, var regexOp: RegexOp, var elems: Seq[
 
   def toRegex(): String = {
     val (matchValue, matchGroup, mathcTxt) = Regexify.toRegex(this)
-    matchValue
+    cleanIrregular(matchValue)
+  }
+
+  def cleanIrregular(regex:String) : String ={
+    val mregex = regex.replaceAll("\\|\\?","?")
+    mregex
   }
 
 
@@ -441,6 +451,7 @@ case class RegexNodeIndex(var maxDex: Int, var regexOp: RegexOp, var elems: Seq[
     matchTxt = newMatchTxt
     matchGroup = newMatchGroup
     this
+
   }
 
   def toCountGroup(min:Int, max:Int):String={
@@ -510,7 +521,6 @@ case class RegexNodeIndex(var maxDex: Int, var regexOp: RegexOp, var elems: Seq[
     this
   }
 
-
   override def toString: String = {
     toString(0)
   }
@@ -540,7 +550,7 @@ case class RegexNodeIndex(var maxDex: Int, var regexOp: RegexOp, var elems: Seq[
   }
 
   def matchesByGroup(rightNode: RegexNodeIndex): Boolean = {
-    matchTxt.matches(rightNode.matchGroup)
+    matchTxt.matches(rightNode.getMatchGroup())
   }
 
   def matchesByInfGroup(rightNode: RegexNodeIndex): Boolean = {
@@ -587,9 +597,9 @@ case class RegexNodeIndex(var maxDex: Int, var regexOp: RegexOp, var elems: Seq[
 object RegexNode {
   def or(a: RegexNodeIndex, b: RegexNodeIndex): RegexNodeIndex = {
     if (a.canMatch(b)) RegexNodeIndex(a.maxDex, RegexOp(Regexify.seq))
-      .setMatchGroup(a.matchGroup)
+      .setMatchGroup(a.getMatchGroup())
       .setMatchTxt(a.matchTxt)
-      .setMatchValue(a.matchValue)
+      .setMatchValue(a.getMatchValue())
     else RegexNodeIndex(a.maxDex, RegexOp(Regexify.or), Seq(a, b))
       .regexify()
   }
